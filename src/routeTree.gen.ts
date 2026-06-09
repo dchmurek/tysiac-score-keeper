@@ -9,38 +9,313 @@
 // Additionally, you should also exclude this file from your linter and/or formatter to prevent it from being checked or modified.
 
 import { Route as rootRouteImport } from './routes/__root'
+import { Route as SignUpRouteImport } from './routes/sign-up'
+import { Route as SignInRouteImport } from './routes/sign-in'
+import { Route as SettingsRouteImport } from './routes/settings'
+import { Route as RankingsRouteImport } from './routes/rankings'
+import { Route as ProfileRouteImport } from './routes/profile'
+import { Route as PairsRouteImport } from './routes/pairs'
+import { Route as NotificationsRouteImport } from './routes/notifications'
+import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
+import { Route as DashboardRouteImport } from './routes/dashboard'
+import { Route as CreateRoomRouteImport } from './routes/create-room'
+import { Route as ConnectGuestRouteImport } from './routes/connect-guest'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as HistoryIndexRouteImport } from './routes/history.index'
+import { Route as RoomRoomIdRouteImport } from './routes/room.$roomId'
+import { Route as HistoryMatchIdRouteImport } from './routes/history.$matchId'
+import { Route as RoomRoomIdLargeScreenRouteImport } from './routes/room.$roomId.large-screen'
 
+const SignUpRoute = SignUpRouteImport.update({
+  id: '/sign-up',
+  path: '/sign-up',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SignInRoute = SignInRouteImport.update({
+  id: '/sign-in',
+  path: '/sign-in',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const SettingsRoute = SettingsRouteImport.update({
+  id: '/settings',
+  path: '/settings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RankingsRoute = RankingsRouteImport.update({
+  id: '/rankings',
+  path: '/rankings',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ProfileRoute = ProfileRouteImport.update({
+  id: '/profile',
+  path: '/profile',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const PairsRoute = PairsRouteImport.update({
+  id: '/pairs',
+  path: '/pairs',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const NotificationsRoute = NotificationsRouteImport.update({
+  id: '/notifications',
+  path: '/notifications',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ForgotPasswordRoute = ForgotPasswordRouteImport.update({
+  id: '/forgot-password',
+  path: '/forgot-password',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const DashboardRoute = DashboardRouteImport.update({
+  id: '/dashboard',
+  path: '/dashboard',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const CreateRoomRoute = CreateRoomRouteImport.update({
+  id: '/create-room',
+  path: '/create-room',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const ConnectGuestRoute = ConnectGuestRouteImport.update({
+  id: '/connect-guest',
+  path: '/connect-guest',
+  getParentRoute: () => rootRouteImport,
+} as any)
 const IndexRoute = IndexRouteImport.update({
   id: '/',
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const HistoryIndexRoute = HistoryIndexRouteImport.update({
+  id: '/history/',
+  path: '/history/',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomRoomIdRoute = RoomRoomIdRouteImport.update({
+  id: '/room/$roomId',
+  path: '/room/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const HistoryMatchIdRoute = HistoryMatchIdRouteImport.update({
+  id: '/history/$matchId',
+  path: '/history/$matchId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomRoomIdLargeScreenRoute = RoomRoomIdLargeScreenRouteImport.update({
+  id: '/large-screen',
+  path: '/large-screen',
+  getParentRoute: () => RoomRoomIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
+  '/connect-guest': typeof ConnectGuestRoute
+  '/create-room': typeof CreateRoomRoute
+  '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/notifications': typeof NotificationsRoute
+  '/pairs': typeof PairsRoute
+  '/profile': typeof ProfileRoute
+  '/rankings': typeof RankingsRoute
+  '/settings': typeof SettingsRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/history/$matchId': typeof HistoryMatchIdRoute
+  '/room/$roomId': typeof RoomRoomIdRouteWithChildren
+  '/history/': typeof HistoryIndexRoute
+  '/room/$roomId/large-screen': typeof RoomRoomIdLargeScreenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
+  '/connect-guest': typeof ConnectGuestRoute
+  '/create-room': typeof CreateRoomRoute
+  '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/notifications': typeof NotificationsRoute
+  '/pairs': typeof PairsRoute
+  '/profile': typeof ProfileRoute
+  '/rankings': typeof RankingsRoute
+  '/settings': typeof SettingsRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/history/$matchId': typeof HistoryMatchIdRoute
+  '/room/$roomId': typeof RoomRoomIdRouteWithChildren
+  '/history': typeof HistoryIndexRoute
+  '/room/$roomId/large-screen': typeof RoomRoomIdLargeScreenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
   '/': typeof IndexRoute
+  '/connect-guest': typeof ConnectGuestRoute
+  '/create-room': typeof CreateRoomRoute
+  '/dashboard': typeof DashboardRoute
+  '/forgot-password': typeof ForgotPasswordRoute
+  '/notifications': typeof NotificationsRoute
+  '/pairs': typeof PairsRoute
+  '/profile': typeof ProfileRoute
+  '/rankings': typeof RankingsRoute
+  '/settings': typeof SettingsRoute
+  '/sign-in': typeof SignInRoute
+  '/sign-up': typeof SignUpRoute
+  '/history/$matchId': typeof HistoryMatchIdRoute
+  '/room/$roomId': typeof RoomRoomIdRouteWithChildren
+  '/history/': typeof HistoryIndexRoute
+  '/room/$roomId/large-screen': typeof RoomRoomIdLargeScreenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
-  fullPaths: '/'
+  fullPaths:
+    | '/'
+    | '/connect-guest'
+    | '/create-room'
+    | '/dashboard'
+    | '/forgot-password'
+    | '/notifications'
+    | '/pairs'
+    | '/profile'
+    | '/rankings'
+    | '/settings'
+    | '/sign-in'
+    | '/sign-up'
+    | '/history/$matchId'
+    | '/room/$roomId'
+    | '/history/'
+    | '/room/$roomId/large-screen'
   fileRoutesByTo: FileRoutesByTo
-  to: '/'
-  id: '__root__' | '/'
+  to:
+    | '/'
+    | '/connect-guest'
+    | '/create-room'
+    | '/dashboard'
+    | '/forgot-password'
+    | '/notifications'
+    | '/pairs'
+    | '/profile'
+    | '/rankings'
+    | '/settings'
+    | '/sign-in'
+    | '/sign-up'
+    | '/history/$matchId'
+    | '/room/$roomId'
+    | '/history'
+    | '/room/$roomId/large-screen'
+  id:
+    | '__root__'
+    | '/'
+    | '/connect-guest'
+    | '/create-room'
+    | '/dashboard'
+    | '/forgot-password'
+    | '/notifications'
+    | '/pairs'
+    | '/profile'
+    | '/rankings'
+    | '/settings'
+    | '/sign-in'
+    | '/sign-up'
+    | '/history/$matchId'
+    | '/room/$roomId'
+    | '/history/'
+    | '/room/$roomId/large-screen'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
   IndexRoute: typeof IndexRoute
+  ConnectGuestRoute: typeof ConnectGuestRoute
+  CreateRoomRoute: typeof CreateRoomRoute
+  DashboardRoute: typeof DashboardRoute
+  ForgotPasswordRoute: typeof ForgotPasswordRoute
+  NotificationsRoute: typeof NotificationsRoute
+  PairsRoute: typeof PairsRoute
+  ProfileRoute: typeof ProfileRoute
+  RankingsRoute: typeof RankingsRoute
+  SettingsRoute: typeof SettingsRoute
+  SignInRoute: typeof SignInRoute
+  SignUpRoute: typeof SignUpRoute
+  HistoryMatchIdRoute: typeof HistoryMatchIdRoute
+  RoomRoomIdRoute: typeof RoomRoomIdRouteWithChildren
+  HistoryIndexRoute: typeof HistoryIndexRoute
 }
 
 declare module '@tanstack/react-router' {
   interface FileRoutesByPath {
+    '/sign-up': {
+      id: '/sign-up'
+      path: '/sign-up'
+      fullPath: '/sign-up'
+      preLoaderRoute: typeof SignUpRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/sign-in': {
+      id: '/sign-in'
+      path: '/sign-in'
+      fullPath: '/sign-in'
+      preLoaderRoute: typeof SignInRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/settings': {
+      id: '/settings'
+      path: '/settings'
+      fullPath: '/settings'
+      preLoaderRoute: typeof SettingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/rankings': {
+      id: '/rankings'
+      path: '/rankings'
+      fullPath: '/rankings'
+      preLoaderRoute: typeof RankingsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/profile': {
+      id: '/profile'
+      path: '/profile'
+      fullPath: '/profile'
+      preLoaderRoute: typeof ProfileRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/pairs': {
+      id: '/pairs'
+      path: '/pairs'
+      fullPath: '/pairs'
+      preLoaderRoute: typeof PairsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/notifications': {
+      id: '/notifications'
+      path: '/notifications'
+      fullPath: '/notifications'
+      preLoaderRoute: typeof NotificationsRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/forgot-password': {
+      id: '/forgot-password'
+      path: '/forgot-password'
+      fullPath: '/forgot-password'
+      preLoaderRoute: typeof ForgotPasswordRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/dashboard': {
+      id: '/dashboard'
+      path: '/dashboard'
+      fullPath: '/dashboard'
+      preLoaderRoute: typeof DashboardRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/create-room': {
+      id: '/create-room'
+      path: '/create-room'
+      fullPath: '/create-room'
+      preLoaderRoute: typeof CreateRoomRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/connect-guest': {
+      id: '/connect-guest'
+      path: '/connect-guest'
+      fullPath: '/connect-guest'
+      preLoaderRoute: typeof ConnectGuestRouteImport
+      parentRoute: typeof rootRouteImport
+    }
     '/': {
       id: '/'
       path: '/'
@@ -48,22 +323,66 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/history/': {
+      id: '/history/'
+      path: '/history'
+      fullPath: '/history/'
+      preLoaderRoute: typeof HistoryIndexRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/room/$roomId': {
+      id: '/room/$roomId'
+      path: '/room/$roomId'
+      fullPath: '/room/$roomId'
+      preLoaderRoute: typeof RoomRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/history/$matchId': {
+      id: '/history/$matchId'
+      path: '/history/$matchId'
+      fullPath: '/history/$matchId'
+      preLoaderRoute: typeof HistoryMatchIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/room/$roomId/large-screen': {
+      id: '/room/$roomId/large-screen'
+      path: '/large-screen'
+      fullPath: '/room/$roomId/large-screen'
+      preLoaderRoute: typeof RoomRoomIdLargeScreenRouteImport
+      parentRoute: typeof RoomRoomIdRoute
+    }
   }
 }
 
+interface RoomRoomIdRouteChildren {
+  RoomRoomIdLargeScreenRoute: typeof RoomRoomIdLargeScreenRoute
+}
+
+const RoomRoomIdRouteChildren: RoomRoomIdRouteChildren = {
+  RoomRoomIdLargeScreenRoute: RoomRoomIdLargeScreenRoute,
+}
+
+const RoomRoomIdRouteWithChildren = RoomRoomIdRoute._addFileChildren(
+  RoomRoomIdRouteChildren,
+)
+
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
+  ConnectGuestRoute: ConnectGuestRoute,
+  CreateRoomRoute: CreateRoomRoute,
+  DashboardRoute: DashboardRoute,
+  ForgotPasswordRoute: ForgotPasswordRoute,
+  NotificationsRoute: NotificationsRoute,
+  PairsRoute: PairsRoute,
+  ProfileRoute: ProfileRoute,
+  RankingsRoute: RankingsRoute,
+  SettingsRoute: SettingsRoute,
+  SignInRoute: SignInRoute,
+  SignUpRoute: SignUpRoute,
+  HistoryMatchIdRoute: HistoryMatchIdRoute,
+  RoomRoomIdRoute: RoomRoomIdRouteWithChildren,
+  HistoryIndexRoute: HistoryIndexRoute,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
   ._addFileTypes<FileRouteTypes>()
-
-import type { getRouter } from './router.tsx'
-import type { startInstance } from './start.ts'
-declare module '@tanstack/react-start' {
-  interface Register {
-    ssr: true
-    router: Awaited<ReturnType<typeof getRouter>>
-    config: Awaited<ReturnType<typeof startInstance.getOptions>>
-  }
-}
