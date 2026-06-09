@@ -15,6 +15,8 @@ import { Route as ForgotPasswordRouteImport } from './routes/forgot-password'
 import { Route as DashboardRouteImport } from './routes/dashboard'
 import { Route as CreateRoomRouteImport } from './routes/create-room'
 import { Route as IndexRouteImport } from './routes/index'
+import { Route as RoomRoomIdRouteImport } from './routes/room.$roomId'
+import { Route as RoomRoomIdLargeScreenRouteImport } from './routes/room.$roomId.large-screen'
 
 const SignUpRoute = SignUpRouteImport.update({
   id: '/sign-up',
@@ -46,6 +48,16 @@ const IndexRoute = IndexRouteImport.update({
   path: '/',
   getParentRoute: () => rootRouteImport,
 } as any)
+const RoomRoomIdRoute = RoomRoomIdRouteImport.update({
+  id: '/room/$roomId',
+  path: '/room/$roomId',
+  getParentRoute: () => rootRouteImport,
+} as any)
+const RoomRoomIdLargeScreenRoute = RoomRoomIdLargeScreenRouteImport.update({
+  id: '/large-screen',
+  path: '/large-screen',
+  getParentRoute: () => RoomRoomIdRoute,
+} as any)
 
 export interface FileRoutesByFullPath {
   '/': typeof IndexRoute
@@ -54,6 +66,8 @@ export interface FileRoutesByFullPath {
   '/forgot-password': typeof ForgotPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/room/$roomId': typeof RoomRoomIdRouteWithChildren
+  '/room/$roomId/large-screen': typeof RoomRoomIdLargeScreenRoute
 }
 export interface FileRoutesByTo {
   '/': typeof IndexRoute
@@ -62,6 +76,8 @@ export interface FileRoutesByTo {
   '/forgot-password': typeof ForgotPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/room/$roomId': typeof RoomRoomIdRouteWithChildren
+  '/room/$roomId/large-screen': typeof RoomRoomIdLargeScreenRoute
 }
 export interface FileRoutesById {
   __root__: typeof rootRouteImport
@@ -71,6 +87,8 @@ export interface FileRoutesById {
   '/forgot-password': typeof ForgotPasswordRoute
   '/sign-in': typeof SignInRoute
   '/sign-up': typeof SignUpRoute
+  '/room/$roomId': typeof RoomRoomIdRouteWithChildren
+  '/room/$roomId/large-screen': typeof RoomRoomIdLargeScreenRoute
 }
 export interface FileRouteTypes {
   fileRoutesByFullPath: FileRoutesByFullPath
@@ -81,6 +99,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/sign-in'
     | '/sign-up'
+    | '/room/$roomId'
+    | '/room/$roomId/large-screen'
   fileRoutesByTo: FileRoutesByTo
   to:
     | '/'
@@ -89,6 +109,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/sign-in'
     | '/sign-up'
+    | '/room/$roomId'
+    | '/room/$roomId/large-screen'
   id:
     | '__root__'
     | '/'
@@ -97,6 +119,8 @@ export interface FileRouteTypes {
     | '/forgot-password'
     | '/sign-in'
     | '/sign-up'
+    | '/room/$roomId'
+    | '/room/$roomId/large-screen'
   fileRoutesById: FileRoutesById
 }
 export interface RootRouteChildren {
@@ -106,6 +130,7 @@ export interface RootRouteChildren {
   ForgotPasswordRoute: typeof ForgotPasswordRoute
   SignInRoute: typeof SignInRoute
   SignUpRoute: typeof SignUpRoute
+  RoomRoomIdRoute: typeof RoomRoomIdRouteWithChildren
 }
 
 declare module '@tanstack/react-router' {
@@ -152,8 +177,34 @@ declare module '@tanstack/react-router' {
       preLoaderRoute: typeof IndexRouteImport
       parentRoute: typeof rootRouteImport
     }
+    '/room/$roomId': {
+      id: '/room/$roomId'
+      path: '/room/$roomId'
+      fullPath: '/room/$roomId'
+      preLoaderRoute: typeof RoomRoomIdRouteImport
+      parentRoute: typeof rootRouteImport
+    }
+    '/room/$roomId/large-screen': {
+      id: '/room/$roomId/large-screen'
+      path: '/large-screen'
+      fullPath: '/room/$roomId/large-screen'
+      preLoaderRoute: typeof RoomRoomIdLargeScreenRouteImport
+      parentRoute: typeof RoomRoomIdRoute
+    }
   }
 }
+
+interface RoomRoomIdRouteChildren {
+  RoomRoomIdLargeScreenRoute: typeof RoomRoomIdLargeScreenRoute
+}
+
+const RoomRoomIdRouteChildren: RoomRoomIdRouteChildren = {
+  RoomRoomIdLargeScreenRoute: RoomRoomIdLargeScreenRoute,
+}
+
+const RoomRoomIdRouteWithChildren = RoomRoomIdRoute._addFileChildren(
+  RoomRoomIdRouteChildren,
+)
 
 const rootRouteChildren: RootRouteChildren = {
   IndexRoute: IndexRoute,
@@ -162,6 +213,7 @@ const rootRouteChildren: RootRouteChildren = {
   ForgotPasswordRoute: ForgotPasswordRoute,
   SignInRoute: SignInRoute,
   SignUpRoute: SignUpRoute,
+  RoomRoomIdRoute: RoomRoomIdRouteWithChildren,
 }
 export const routeTree = rootRouteImport
   ._addFileChildren(rootRouteChildren)
