@@ -302,6 +302,12 @@ export const addRound = mutation({
     }
 
     if (room.status !== "active") {
+
+      throw new Error("Only an active match can be modified.");
+
+    }
+
+    if (room.status !== "active") {
       throw new Error("This match is not active.");
     }
 
@@ -391,6 +397,164 @@ export const addRound = mutation({
       scoreA: resultA.finalScore,
       scoreB: resultB.finalScore,
       winner,
+    };
+  },
+});
+
+export const pauseRoom = mutation({
+  args: {
+    code: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (room.status !== "active") {
+      throw new Error("Only an active match can be paused.");
+    }
+
+    await ctx.db.patch(room._id, {
+      status: "paused",
+    });
+
+    return {
+      status: "paused" as const,
+    };
+  },
+});
+
+export const resumeRoom = mutation({
+  args: {
+    code: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (room.status !== "paused") {
+      throw new Error("Only a paused match can be resumed.");
+    }
+
+    await ctx.db.patch(room._id, {
+      status: "active",
+    });
+
+    return {
+      status: "active" as const,
+    };
+  },
+});
+
+export const undoLastRound = mutation({
+  args: {
+    code: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    const lastRound = await ctx.db
+      .query("rounds")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .order("desc")
+      .first();
+
+    if (!lastRound) {
+      throw new Error("There is no round to undo.");
+    }
+
+    await ctx.db.delete(lastRound._id);
+
+    const previousRound = await ctx.db
+      .query("rounds")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .order("desc")
+      .first();
+
+    const scoreA = previousRound?.scoreAfterA ?? 0;
+    const scoreB = previousRound?.scoreAfterB ?? 0;
+
+    await ctx.db.patch(room._id, {
+      scoreA,
+      scoreB,
+      winner: undefined,
+      status: "active",
+    });
+
+    return {
+      removedRoundNumber: lastRound.number,
+      scoreA,
+      scoreB,
+    };
+  },
+});
+
+export const discardRoom = mutation({
+  args: {
+    code: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    const rounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
+    for (const round of rounds) {
+      await ctx.db.delete(round._id);
+    }
+
+    const participants = await ctx.db
+      .query("roomParticipants")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
+    for (const participant of participants) {
+      await ctx.db.delete(participant._id);
+    }
+
+    await ctx.db.delete(room._id);
+
+    return {
+      discarded: true,
     };
   },
 });

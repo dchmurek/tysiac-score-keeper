@@ -1,4 +1,9 @@
-import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import {
+  createFileRoute,
+  Link,
+  useNavigate,
+  useParams,
+} from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
 import { Card } from "@/components/ui/card";
@@ -40,17 +45,25 @@ export const Route = createFileRoute("/room/$roomId")({
 
 function GameRoom() {
   const { roomId } = useParams({ from: "/room/$roomId" });
+  const navigate = useNavigate();
 
   const room = useQuery(api.rooms.getGameRoom, {
     code: roomId,
   });
 
   const addRound = useMutation(api.rooms.addRound);
+  const pauseRoom = useMutation(api.rooms.pauseRoom);
+  const resumeRoom = useMutation(api.rooms.resumeRoom);
+  const undoLastRound = useMutation(api.rooms.undoLastRound);
+  const discardRoom = useMutation(api.rooms.discardRoom);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showPause, setShowPause] = useState(false);
   const [showFinish, setShowFinish] = useState(false);
   const [showCorrection, setShowCorrection] = useState(false);
+  const [isPausing, setIsPausing] = useState(false);
+  const [isUndoing, setIsUndoing] = useState(false);
+  const [isDiscarding, setIsDiscarding] = useState(false);
 
   if (room === undefined) {
     return (
@@ -86,6 +99,98 @@ function GameRoom() {
   const leading =
     room.teamA.score > room.teamB.score ? "A" : room.teamB.score > room.teamA.score ? "B" : null;
   const lastRound = room.rounds[room.rounds.length - 1];
+
+  const handleUndoLastRound = async () => {
+    const confirmed = window.confirm(
+      "Undo the last round? This action will restore the previous score.",
+    );
+
+    if (!confirmed) return;
+
+    try {
+      setIsUndoing(true);
+
+      await undoLastRound({
+        code: room.code,
+      });
+
+      toast.success("Last round undone.");
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not undo the last round.",
+      );
+    } finally {
+      setIsUndoing(false);
+    }
+  };
+
+  const handlePauseToggle = async () => {
+    try {
+      setIsPausing(true);
+
+      if (room.status === "paused") {
+        await resumeRoom({
+          code: room.code,
+        });
+
+        toast.success("Game resumed.");
+        return;
+      }
+
+      const confirmed = window.confirm(
+        "Pause this game? It can be resumed later.",
+      );
+
+      if (!confirmed) return;
+
+      await pauseRoom({
+        code: room.code,
+      });
+
+      toast.success("Game paused.");
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not update the game status.",
+      );
+    } finally {
+      setIsPausing(false);
+    }
+  };
+
+  const handleDiscardRoom = async () => {
+    try {
+      setIsDiscarding(true);
+
+      await discardRoom({
+        code: room.code,
+      });
+
+      toast.success("Match discarded.");
+
+      navigate({
+        to: "/dashboard",
+      });
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not discard the match.",
+      );
+    } finally {
+      setIsDiscarding(false);
+      setShowFinish(false);
+    }
+  };
 
   return (
     <AppShell>
@@ -159,6 +264,12 @@ function GameRoom() {
           </div>
         </Card>
 
+        {room.status === "paused" && (
+          <div className="mt-4 rounded-lg border border-amber-300 bg-amber-50 p-3 text-sm text-amber-900">
+            This game is paused. Resume it to enter another round.
+          </div>
+        )}
+
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_320px_1fr]">
           <TeamCard
             teamName={room.teamA.name}
@@ -185,12 +296,21 @@ function GameRoom() {
               <div className="mt-3 grid grid-cols-2 gap-2">
                 <Button
                   variant="outline"
-                  size="sm"
-                  onClick={() => toast.success("Last round undone")}
+                  onClick={handleUndoLastRound}
+                  disabled={
+                    isUndoing ||
+                    room.rounds.length === 0 ||
+                    room.status !== "active"
+                  }
                 >
-                  <Undo2 className="h-3.5 w-3.5" /> Undo
+                  {isUndoing ? "Undoing..." : "Undo Last Round"}
                 </Button>
-                <Button variant="outline" size="sm" onClick={() => setShowCorrection(true)}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setShowCorrection(true)}
+                  disabled={room.status !== "active"}
+                >
                   <Pencil className="h-3.5 w-3.5" /> Correction
                 </Button>
               </div>
@@ -199,6 +319,7 @@ function GameRoom() {
                 size="sm"
                 className="mt-2 w-full text-muted-foreground"
                 onClick={() => setShowFinish(true)}
+                disabled={room.status === "finished"}
               >
                 Finish Without Saving
               </Button>
@@ -250,8 +371,16 @@ function GameRoom() {
                   <RoundHistoryItem
                     key={r.id}
                     round={r}
-                    onUndo={() => toast.success(`Round #${r.number} undone`)}
-                    onCorrect={() => setShowCorrection(true)}
+                    onUndo={
+                      room.status === "active"
+                        ? () => toast.success(`Round #${r.number} undone`)
+                        : undefined
+                    }
+                    onCorrect={
+                      room.status === "active"
+                        ? () => setShowCorrection(true)
+                        : undefined
+                    }
                   />
                 ))}
               </div>
@@ -293,12 +422,15 @@ function GameRoom() {
               Cancel
             </Button>
             <Button
-              onClick={() => {
-                setShowPause(false);
-                toast.success("Game paused");
-              }}
+              variant="outline"
+              onClick={handlePauseToggle}
+              disabled={isPausing || room.status === "finished"}
             >
-              Pause Game
+              {isPausing
+                ? "Saving..."
+                : room.status === "paused"
+                  ? "Resume Game"
+                  : "Pause Game"}
             </Button>
           </DialogFooter>
         </DialogContent>
@@ -319,12 +451,11 @@ function GameRoom() {
             </Button>
             <Button
               variant="destructive"
-              onClick={() => {
-                setShowFinish(false);
-                toast.success("Match discarded");
-              }}
+              onClick={handleDiscardRoom}
+              disabled={isDiscarding}
             >
-              <X className="h-4 w-4" /> Discard
+              <X className="h-4 w-4" />
+              {isDiscarding ? "Discarding..." : "Discard"}
             </Button>
           </DialogFooter>
         </DialogContent>
