@@ -31,7 +31,12 @@ export function RoomCodeCard({ code, className }: RoomCodeCardProps) {
         >
           <Copy className="h-4 w-4" /> Copy
         </Button>
-        <Button variant="outline" size="sm" className="flex-1" onClick={() => toast.success("Share link ready")}>
+        <Button
+          variant="outline"
+          size="sm"
+          className="flex-1"
+          onClick={() => toast.success("Share link ready")}
+        >
           <Share2 className="h-4 w-4" /> Share
         </Button>
       </div>

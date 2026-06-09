@@ -7,7 +7,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/sign-up")({
-  head: () => ({ meta: [{ title: "Create Account — Tysiac Score" }, { name: "description", content: "Create your Tysiac Score account." }] }),
+  head: () => ({
+    meta: [
+      { title: "Create Account — Tysiac Score" },
+      { name: "description", content: "Create your Tysiac Score account." },
+    ],
+  }),
   component: SignUpPage,
 });
 
@@ -18,7 +23,9 @@ function SignUpPage() {
       <div className="mx-auto max-w-md px-4 py-12 sm:px-6">
         <Card className="p-6 sm:p-8">
           <h1 className="font-display text-2xl font-bold">Create account</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Track every match, every round, every win.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Track every match, every round, every win.
+          </p>
           <form
             className="mt-6 space-y-4"
             onSubmit={(e) => {
@@ -44,13 +51,19 @@ function SignUpPage() {
                 <Input id="pw2" type="password" className="mt-2 h-11" />
               </div>
             </div>
-            <Button type="submit" className="h-12 w-full text-base">Create Account</Button>
+            <Button type="submit" className="h-12 w-full text-base">
+              Create Account
+            </Button>
           </form>
           <p className="mt-4 rounded-md bg-muted/60 p-3 text-xs text-muted-foreground">
-            You can join a match as a guest and connect it to your account later. Your guest nickname doesn't have to match your account username.
+            You can join a match as a guest and connect it to your account later. Your guest
+            nickname doesn't have to match your account username.
           </p>
           <p className="mt-4 text-center text-sm text-muted-foreground">
-            Already have an account? <Link to="/sign-in" className="font-medium text-primary hover:underline">Sign in</Link>
+            Already have an account?{" "}
+            <Link to="/sign-in" className="font-medium text-primary hover:underline">
+              Sign in
+            </Link>
           </p>
         </Card>
       </div>

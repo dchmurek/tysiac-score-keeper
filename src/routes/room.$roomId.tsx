@@ -5,20 +5,30 @@ import { Card } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import {
-  Dialog, DialogContent, DialogHeader, DialogTitle, DialogDescription, DialogFooter,
+  Dialog,
+  DialogContent,
+  DialogHeader,
+  DialogTitle,
+  DialogDescription,
+  DialogFooter,
 } from "@/components/ui/dialog";
-import {
-  Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger,
-} from "@/components/ui/sheet";
-import {
-  Collapsible, CollapsibleContent, CollapsibleTrigger,
-} from "@/components/ui/collapsible";
+import { Sheet, SheetContent, SheetHeader, SheetTitle, SheetTrigger } from "@/components/ui/sheet";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { TeamCard } from "@/components/team-card";
 import { RoundHistoryItem } from "@/components/round-history-item";
 import { AddRoundModal } from "@/components/add-round-modal";
 import { activeRoom, pausedRoom } from "@/lib/mock-data";
 import {
-  Plus, Undo2, Pencil, Pause, X, Maximize2, QrCode, Copy, ChevronDown, History,
+  Plus,
+  Undo2,
+  Pencil,
+  Pause,
+  X,
+  Maximize2,
+  QrCode,
+  Copy,
+  ChevronDown,
+  History,
 } from "lucide-react";
 import { toast } from "sonner";
 
@@ -36,7 +46,8 @@ function GameRoom() {
   const [showFinish, setShowFinish] = useState(false);
   const [showCorrection, setShowCorrection] = useState(false);
 
-  const leading = room.teamA.score > room.teamB.score ? "A" : room.teamB.score > room.teamA.score ? "B" : null;
+  const leading =
+    room.teamA.score > room.teamB.score ? "A" : room.teamB.score > room.teamA.score ? "B" : null;
   const lastRound = room.rounds[room.rounds.length - 1];
 
   return (
@@ -47,7 +58,10 @@ function GameRoom() {
           <div className="min-w-0">
             <div className="flex items-center gap-2">
               <h1 className="font-display text-lg font-bold sm:text-xl">{room.name}</h1>
-              <Badge variant={room.status === "paused" ? "secondary" : "default"} className="capitalize">
+              <Badge
+                variant={room.status === "paused" ? "secondary" : "default"}
+                className="capitalize"
+              >
                 {room.status}
               </Badge>
             </div>
@@ -61,16 +75,28 @@ function GameRoom() {
             <div className="hidden items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 sm:flex">
               <span className="text-xs text-muted-foreground">Code</span>
               <span className="font-mono text-sm font-bold tracking-wider">{room.code}</span>
-              <Button size="icon" variant="ghost" className="h-7 w-7" onClick={() => { navigator.clipboard?.writeText(room.code); toast.success("Copied"); }}>
+              <Button
+                size="icon"
+                variant="ghost"
+                className="h-7 w-7"
+                onClick={() => {
+                  navigator.clipboard?.writeText(room.code);
+                  toast.success("Copied");
+                }}
+              >
                 <Copy className="h-3.5 w-3.5" />
               </Button>
             </div>
             <Sheet>
               <SheetTrigger asChild>
-                <Button size="icon" variant="outline" aria-label="QR code"><QrCode className="h-4 w-4" /></Button>
+                <Button size="icon" variant="outline" aria-label="QR code">
+                  <QrCode className="h-4 w-4" />
+                </Button>
               </SheetTrigger>
               <SheetContent>
-                <SheetHeader><SheetTitle>Room {room.code}</SheetTitle></SheetHeader>
+                <SheetHeader>
+                  <SheetTitle>Room {room.code}</SheetTitle>
+                </SheetHeader>
                 <div className="mt-6 grid place-items-center">
                   <div className="grid h-56 w-56 place-items-center rounded-xl border-2 border-dashed border-border bg-muted/40">
                     <QrCode className="h-24 w-24 text-muted-foreground" />
@@ -81,21 +107,36 @@ function GameRoom() {
               </SheetContent>
             </Sheet>
             <Link to="/room/$roomId/large-screen" params={{ roomId }}>
-              <Button size="icon" variant="outline" aria-label="Large screen mode"><Maximize2 className="h-4 w-4" /></Button>
+              <Button size="icon" variant="outline" aria-label="Large screen mode">
+                <Maximize2 className="h-4 w-4" />
+              </Button>
             </Link>
-            <Button size="icon" variant="outline" aria-label="Pause" onClick={() => setShowPause(true)}>
+            <Button
+              size="icon"
+              variant="outline"
+              aria-label="Pause"
+              onClick={() => setShowPause(true)}
+            >
               <Pause className="h-4 w-4" />
             </Button>
           </div>
         </Card>
 
         <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_320px_1fr]">
-          <TeamCard teamName={room.teamA.name} players={room.teamA.players.map((p) => p.name)} score={room.teamA.score} team="A" leading={leading === "A"} />
+          <TeamCard
+            teamName={room.teamA.name}
+            players={room.teamA.players.map((p) => p.name)}
+            score={room.teamA.score}
+            team="A"
+            leading={leading === "A"}
+          />
 
           {/* Center actions (lives between cards on desktop, below on mobile) */}
           <div className="order-3 flex flex-col gap-3 lg:order-none">
             <Card className="p-5 text-center">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Next action</p>
+              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                Next action
+              </p>
               <Button
                 size="lg"
                 className="mt-3 h-16 w-full text-lg"
@@ -105,32 +146,52 @@ function GameRoom() {
                 <Plus className="h-6 w-6" /> Add Round
               </Button>
               <div className="mt-3 grid grid-cols-2 gap-2">
-                <Button variant="outline" size="sm" onClick={() => toast.success("Last round undone")}>
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => toast.success("Last round undone")}
+                >
                   <Undo2 className="h-3.5 w-3.5" /> Undo
                 </Button>
                 <Button variant="outline" size="sm" onClick={() => setShowCorrection(true)}>
                   <Pencil className="h-3.5 w-3.5" /> Correction
                 </Button>
               </div>
-              <Button variant="ghost" size="sm" className="mt-2 w-full text-muted-foreground" onClick={() => setShowFinish(true)}>
+              <Button
+                variant="ghost"
+                size="sm"
+                className="mt-2 w-full text-muted-foreground"
+                onClick={() => setShowFinish(true)}
+              >
                 Finish Without Saving
               </Button>
             </Card>
 
             {lastRound && (
               <Card className="p-4">
-                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">Last round</p>
+                <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
+                  Last round
+                </p>
                 <div className="mt-2 flex items-center justify-between text-sm tabular-nums">
-                  <span>Round #{lastRound.number} — led by Team {lastRound.leadingTeam}</span>
+                  <span>
+                    Round #{lastRound.number} — led by Team {lastRound.leadingTeam}
+                  </span>
                 </div>
                 <div className="mt-1 text-xs text-muted-foreground">
-                  +{lastRound.pointsA} / +{lastRound.pointsB} → {lastRound.scoreAfterA} : {lastRound.scoreAfterB}
+                  +{lastRound.pointsA} / +{lastRound.pointsB} → {lastRound.scoreAfterA} :{" "}
+                  {lastRound.scoreAfterB}
                 </div>
               </Card>
             )}
           </div>
 
-          <TeamCard teamName={room.teamB.name} players={room.teamB.players.map((p) => p.name)} score={room.teamB.score} team="B" leading={leading === "B"} />
+          <TeamCard
+            teamName={room.teamB.name}
+            players={room.teamB.players.map((p) => p.name)}
+            score={room.teamB.score}
+            team="B"
+            leading={leading === "B"}
+          />
         </div>
 
         {/* Round history */}
@@ -162,7 +223,13 @@ function GameRoom() {
         </section>
       </div>
 
-      <AddRoundModal open={showAdd} onOpenChange={setShowAdd} currentA={room.teamA.score} currentB={room.teamB.score} targetScore={room.targetScore} />
+      <AddRoundModal
+        open={showAdd}
+        onOpenChange={setShowAdd}
+        currentA={room.teamA.score}
+        currentB={room.teamB.score}
+        targetScore={room.targetScore}
+      />
 
       {/* Pause modal */}
       <Dialog open={showPause} onOpenChange={setShowPause}>
@@ -170,12 +237,22 @@ function GameRoom() {
           <DialogHeader>
             <DialogTitle>Pause this game?</DialogTitle>
             <DialogDescription>
-              The game will be saved and can be resumed later. It will not count toward statistics until it is finished.
+              The game will be saved and can be resumed later. It will not count toward statistics
+              until it is finished.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPause(false)}>Cancel</Button>
-            <Button onClick={() => { setShowPause(false); toast.success("Game paused"); }}>Pause Game</Button>
+            <Button variant="outline" onClick={() => setShowPause(false)}>
+              Cancel
+            </Button>
+            <Button
+              onClick={() => {
+                setShowPause(false);
+                toast.success("Game paused");
+              }}
+            >
+              Pause Game
+            </Button>
           </DialogFooter>
         </DialogContent>
       </Dialog>
@@ -185,11 +262,21 @@ function GameRoom() {
         <DialogContent>
           <DialogHeader>
             <DialogTitle>Finish without saving?</DialogTitle>
-            <DialogDescription>This match will be discarded and won't appear in stats.</DialogDescription>
+            <DialogDescription>
+              This match will be discarded and won't appear in stats.
+            </DialogDescription>
           </DialogHeader>
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowFinish(false)}>Keep playing</Button>
-            <Button variant="destructive" onClick={() => { setShowFinish(false); toast.success("Match discarded"); }}>
+            <Button variant="outline" onClick={() => setShowFinish(false)}>
+              Keep playing
+            </Button>
+            <Button
+              variant="destructive"
+              onClick={() => {
+                setShowFinish(false);
+                toast.success("Match discarded");
+              }}
+            >
               <X className="h-4 w-4" /> Discard
             </Button>
           </DialogFooter>
@@ -202,7 +289,13 @@ function GameRoom() {
   );
 }
 
-function CorrectionDialog({ open, onOpenChange }: { open: boolean; onOpenChange: (o: boolean) => void }) {
+function CorrectionDialog({
+  open,
+  onOpenChange,
+}: {
+  open: boolean;
+  onOpenChange: (o: boolean) => void;
+}) {
   const [team, setTeam] = useState<"A" | "B">("A");
   const [delta, setDelta] = useState("");
   const [reason, setReason] = useState("");
@@ -211,12 +304,20 @@ function CorrectionDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
       <DialogContent>
         <DialogHeader>
           <DialogTitle>Add correction</DialogTitle>
-          <DialogDescription>Apply a positive or negative adjustment to a team's score.</DialogDescription>
+          <DialogDescription>
+            Apply a positive or negative adjustment to a team's score.
+          </DialogDescription>
         </DialogHeader>
         <div className="space-y-4">
           <div className="grid grid-cols-2 gap-2">
             {(["A", "B"] as const).map((t) => (
-              <Button key={t} variant={team === t ? "default" : "outline"} onClick={() => setTeam(t)}>Team {t}</Button>
+              <Button
+                key={t}
+                variant={team === t ? "default" : "outline"}
+                onClick={() => setTeam(t)}
+              >
+                Team {t}
+              </Button>
             ))}
           </div>
           <div>
@@ -240,8 +341,17 @@ function CorrectionDialog({ open, onOpenChange }: { open: boolean; onOpenChange:
           </div>
         </div>
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>Cancel</Button>
-          <Button onClick={() => { onOpenChange(false); toast.success("Correction saved"); }}>Save correction</Button>
+          <Button variant="outline" onClick={() => onOpenChange(false)}>
+            Cancel
+          </Button>
+          <Button
+            onClick={() => {
+              onOpenChange(false);
+              toast.success("Correction saved");
+            }}
+          >
+            Save correction
+          </Button>
         </DialogFooter>
       </DialogContent>
     </Dialog>

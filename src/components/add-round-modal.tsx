@@ -83,7 +83,9 @@ export function AddRoundModal({
         <DialogHeader>
           <DialogTitle>Add Round</DialogTitle>
           <DialogDescription>
-            {step === 1 ? "Which team led the round?" : "Enter the points each team scored this round."}
+            {step === 1
+              ? "Which team led the round?"
+              : "Enter the points each team scored this round."}
           </DialogDescription>
         </DialogHeader>
 
@@ -189,7 +191,8 @@ export function AddRoundModal({
                 <div className="mt-3 flex items-start gap-2 rounded-md bg-success/15 px-3 py-2 text-xs text-success-foreground">
                   <Crown className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Team {resultA.won ? "A" : "B"} reached {targetScore} points while leading. The match will end.
+                    Team {resultA.won ? "A" : "B"} reached {targetScore} points while leading. The
+                    match will end.
                   </span>
                 </div>
               )}
@@ -197,7 +200,8 @@ export function AddRoundModal({
                 <div className="mt-3 flex items-start gap-2 rounded-md bg-warning/20 px-3 py-2 text-xs text-warning-foreground">
                   <AlertTriangle className="mt-0.5 h-3.5 w-3.5 shrink-0" />
                   <span>
-                    Team {resultA.capped ? "A" : "B"} would exceed {targetScore} points, but they did not lead the round. Their score will be capped at 990.
+                    Team {resultA.capped ? "A" : "B"} would exceed {targetScore} points, but they
+                    did not lead the round. Their score will be capped at 990.
                   </span>
                 </div>
               )}

@@ -13,7 +13,6 @@ import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
 import { Toaster } from "@/components/ui/sonner";
 
-
 function NotFoundComponent() {
   return (
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
@@ -80,9 +79,15 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { charSet: "utf-8" },
       { name: "viewport", content: "width=device-width, initial-scale=1" },
       { title: "Tysiac Score — Track your card games" },
-      { name: "description", content: "Live score tracking, rooms, statistics and rankings for Tysiąc card games." },
+      {
+        name: "description",
+        content: "Live score tracking, rooms, statistics and rankings for Tysiąc card games.",
+      },
       { property: "og:title", content: "Tysiac Score" },
-      { property: "og:description", content: "Live score tracking for Tysiąc — rooms, rounds, stats." },
+      {
+        property: "og:description",
+        content: "Live score tracking for Tysiąc — rooms, rounds, stats.",
+      },
       { property: "og:type", content: "website" },
       { name: "twitter:card", content: "summary" },
     ],
@@ -127,4 +132,3 @@ function RootComponent() {
     </QueryClientProvider>
   );
 }
-

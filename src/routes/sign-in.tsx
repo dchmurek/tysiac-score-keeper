@@ -7,7 +7,12 @@ import { Label } from "@/components/ui/label";
 import { toast } from "sonner";
 
 export const Route = createFileRoute("/sign-in")({
-  head: () => ({ meta: [{ title: "Sign In — Tysiac Score" }, { name: "description", content: "Sign in to your Tysiac Score account." }] }),
+  head: () => ({
+    meta: [
+      { title: "Sign In — Tysiac Score" },
+      { name: "description", content: "Sign in to your Tysiac Score account." },
+    ],
+  }),
   component: SignInPage,
 });
 
@@ -18,7 +23,9 @@ function SignInPage() {
       <div className="mx-auto max-w-md px-4 py-12 sm:px-6">
         <Card className="p-6 sm:p-8">
           <h1 className="font-display text-2xl font-bold">Welcome back</h1>
-          <p className="mt-1 text-sm text-muted-foreground">Sign in to manage rooms and view your stats.</p>
+          <p className="mt-1 text-sm text-muted-foreground">
+            Sign in to manage rooms and view your stats.
+          </p>
           <form
             className="mt-6 space-y-4"
             onSubmit={(e) => {
@@ -34,11 +41,17 @@ function SignInPage() {
               <Label htmlFor="password">Password</Label>
               <Input id="password" type="password" placeholder="••••••••" className="mt-2 h-11" />
             </div>
-            <Button type="submit" className="h-12 w-full text-base">Sign In</Button>
+            <Button type="submit" className="h-12 w-full text-base">
+              Sign In
+            </Button>
           </form>
           <div className="mt-5 flex items-center justify-between text-sm">
-            <Link to="/forgot-password" className="text-primary hover:underline">Forgot password?</Link>
-            <Link to="/sign-up" className="text-primary hover:underline">Create account</Link>
+            <Link to="/forgot-password" className="text-primary hover:underline">
+              Forgot password?
+            </Link>
+            <Link to="/sign-up" className="text-primary hover:underline">
+              Create account
+            </Link>
           </div>
           <p className="mt-4 rounded-md bg-muted/60 p-3 text-xs text-muted-foreground">
             You can join a match as a guest and connect it to your account later.

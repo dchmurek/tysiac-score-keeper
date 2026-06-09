@@ -55,7 +55,12 @@ export function TeamCard({
       </div>
 
       <div className="mt-4 flex items-baseline gap-2">
-        <span className={cn("score-display text-foreground", compact ? "text-5xl" : "text-6xl sm:text-7xl")}>
+        <span
+          className={cn(
+            "score-display text-foreground",
+            compact ? "text-5xl" : "text-6xl sm:text-7xl",
+          )}
+        >
           {score}
         </span>
         <span className="text-sm font-medium text-muted-foreground">pts</span>

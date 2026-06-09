@@ -31,13 +31,19 @@ export function PlayerBadge({ name, isGuest, size = "md", status }: PlayerBadgeP
         </Badge>
       )}
       {status === "pending" && (
-        <Badge variant="outline" className="text-[10px]">Pending</Badge>
+        <Badge variant="outline" className="text-[10px]">
+          Pending
+        </Badge>
       )}
       {status === "confirmed" && (
-        <Badge variant="secondary" className="text-[10px]">Confirmed</Badge>
+        <Badge variant="secondary" className="text-[10px]">
+          Confirmed
+        </Badge>
       )}
       {status === "auto" && (
-        <Badge variant="secondary" className="text-[10px]">Auto-confirmed</Badge>
+        <Badge variant="secondary" className="text-[10px]">
+          Auto-confirmed
+        </Badge>
       )}
     </div>
   );

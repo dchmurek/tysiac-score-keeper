@@ -76,7 +76,12 @@ function Dashboard() {
             </div>
             <div>
               <p className="font-semibold">
-                Pending {pendingConfirmations.length > 0 && <Badge variant="secondary" className="ml-1">{pendingConfirmations.length}</Badge>}
+                Pending{" "}
+                {pendingConfirmations.length > 0 && (
+                  <Badge variant="secondary" className="ml-1">
+                    {pendingConfirmations.length}
+                  </Badge>
+                )}
               </p>
               <p className="text-xs text-muted-foreground">Match confirmations</p>
             </div>
@@ -89,7 +94,11 @@ function Dashboard() {
             <StatsCard label="Games" value={playerStats.games} />
             <StatsCard label="Wins" value={playerStats.wins} />
             <StatsCard label="Losses" value={playerStats.losses} />
-            <StatsCard label="Win rate" value={`${Math.round(playerStats.winRate * 100)}%`} emphasis />
+            <StatsCard
+              label="Win rate"
+              value={`${Math.round(playerStats.winRate * 100)}%`}
+              emphasis
+            />
           </div>
         </section>
 
@@ -98,10 +107,15 @@ function Dashboard() {
             <h2 className="font-display text-lg font-bold">Pending confirmations</h2>
             <div className="mt-3 space-y-2">
               {pendingConfirmations.map((pc) => (
-                <Card key={pc.id} className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between">
+                <Card
+                  key={pc.id}
+                  className="flex flex-col gap-3 p-4 sm:flex-row sm:items-center sm:justify-between"
+                >
                   <div>
                     <p className="text-sm font-medium">{pc.message}</p>
-                    <p className="text-xs text-muted-foreground">{format(new Date(pc.date), "MMMM d, yyyy")}</p>
+                    <p className="text-xs text-muted-foreground">
+                      {format(new Date(pc.date), "MMMM d, yyyy")}
+                    </p>
                   </div>
                   <div className="flex gap-2">
                     <Button size="sm" variant="outline" onClick={() => toast.success("Rejected")}>
@@ -131,19 +145,27 @@ function Dashboard() {
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
                       <p className="font-semibold">{m.roomName}</p>
-                      <Badge variant="outline" className="text-[10px] capitalize">{m.status}</Badge>
+                      <Badge variant="outline" className="text-[10px] capitalize">
+                        {m.status}
+                      </Badge>
                     </div>
-                    <p className="mt-0.5 text-xs text-muted-foreground">{format(new Date(m.date), "MMM d, yyyy")}</p>
+                    <p className="mt-0.5 text-xs text-muted-foreground">
+                      {format(new Date(m.date), "MMM d, yyyy")}
+                    </p>
                   </div>
                   <div className="flex items-center gap-4 tabular-nums">
                     <div className="text-right">
                       <p className="text-xs text-muted-foreground">{m.teamA.players.join(" + ")}</p>
-                      <p className={`font-bold ${m.winner === "A" ? "text-success" : ""}`}>{m.teamA.score}</p>
+                      <p className={`font-bold ${m.winner === "A" ? "text-success" : ""}`}>
+                        {m.teamA.score}
+                      </p>
                     </div>
                     <span className="text-muted-foreground">vs</span>
                     <div>
                       <p className="text-xs text-muted-foreground">{m.teamB.players.join(" + ")}</p>
-                      <p className={`font-bold ${m.winner === "B" ? "text-success" : ""}`}>{m.teamB.score}</p>
+                      <p className={`font-bold ${m.winner === "B" ? "text-success" : ""}`}>
+                        {m.teamB.score}
+                      </p>
                     </div>
                     <Link to="/history/$matchId" params={{ matchId: m.id }}>
                       <Button variant="ghost" size="icon">

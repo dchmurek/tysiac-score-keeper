@@ -22,18 +22,25 @@ function ConnectGuest() {
           </div>
           <h1 className="mt-4 font-display text-2xl font-bold">Connect guest match</h1>
           <p className="mt-2 text-sm text-muted-foreground">
-            You played as <strong className="text-foreground">Bary</strong>. Sign in or create an account to add this match to your statistics.
+            You played as <strong className="text-foreground">Bary</strong>. Sign in or create an
+            account to add this match to your statistics.
           </p>
 
           <div className="mt-6 flex items-center justify-center gap-4">
             <div className="text-center">
-              <Avatar className="mx-auto h-12 w-12"><AvatarFallback className="bg-warning/30 text-sm font-bold">BA</AvatarFallback></Avatar>
+              <Avatar className="mx-auto h-12 w-12">
+                <AvatarFallback className="bg-warning/30 text-sm font-bold">BA</AvatarFallback>
+              </Avatar>
               <p className="mt-1 text-xs text-muted-foreground">Guest</p>
               <p className="font-semibold">Bary</p>
             </div>
             <ArrowRight className="h-5 w-5 text-muted-foreground" />
             <div className="text-center">
-              <Avatar className="mx-auto h-12 w-12"><AvatarFallback className="bg-primary/10 text-sm font-bold text-primary">BA</AvatarFallback></Avatar>
+              <Avatar className="mx-auto h-12 w-12">
+                <AvatarFallback className="bg-primary/10 text-sm font-bold text-primary">
+                  BA
+                </AvatarFallback>
+              </Avatar>
               <p className="mt-1 text-xs text-muted-foreground">Account</p>
               <p className="font-semibold">Bartek</p>
             </div>
@@ -44,9 +51,19 @@ function ConnectGuest() {
           </p>
 
           <div className="mt-6 grid gap-2">
-            <Button onClick={() => toast.success("Match connected to Bartek")}>Confirm connection</Button>
-            <Link to="/sign-in"><Button variant="outline" className="w-full">Sign in to a different account</Button></Link>
-            <Link to="/sign-up"><Button variant="ghost" className="w-full">Create account</Button></Link>
+            <Button onClick={() => toast.success("Match connected to Bartek")}>
+              Confirm connection
+            </Button>
+            <Link to="/sign-in">
+              <Button variant="outline" className="w-full">
+                Sign in to a different account
+              </Button>
+            </Link>
+            <Link to="/sign-up">
+              <Button variant="ghost" className="w-full">
+                Create account
+              </Button>
+            </Link>
           </div>
         </Card>
       </div>
