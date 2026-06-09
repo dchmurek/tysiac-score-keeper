@@ -17,7 +17,8 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { TeamCard } from "@/components/team-card";
 import { RoundHistoryItem } from "@/components/round-history-item";
 import { AddRoundModal } from "@/components/add-round-modal";
-import { activeRoom, pausedRoom } from "@/lib/mock-data";
+import { useMutation, useQuery } from "convex/react";
+import { api } from "../../convex/_generated/api";
 import {
   Plus,
   Undo2,
@@ -39,12 +40,48 @@ export const Route = createFileRoute("/room/$roomId")({
 
 function GameRoom() {
   const { roomId } = useParams({ from: "/room/$roomId" });
-  const room = roomId === "r-paused" ? pausedRoom : activeRoom;
+
+  const room = useQuery(api.rooms.getGameRoom, {
+    code: roomId,
+  });
+
+  const addRound = useMutation(api.rooms.addRound);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showPause, setShowPause] = useState(false);
   const [showFinish, setShowFinish] = useState(false);
   const [showCorrection, setShowCorrection] = useState(false);
+
+  if (room === undefined) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+          <Card className="p-6 text-center">
+            <p className="text-sm text-muted-foreground">
+              Loading room...
+            </p>
+          </Card>
+        </div>
+      </AppShell>
+    );
+  }
+
+  if (room === null) {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-7xl px-4 py-10 sm:px-6">
+          <Card className="p-6 text-center">
+            <h1 className="font-display text-xl font-bold">
+              Room not found
+            </h1>
+            <p className="mt-2 text-sm text-muted-foreground">
+              Check the room code and try again.
+            </p>
+          </Card>
+        </div>
+      </AppShell>
+    );
+  }
 
   const leading =
     room.teamA.score > room.teamB.score ? "A" : room.teamB.score > room.teamA.score ? "B" : null;
@@ -229,6 +266,16 @@ function GameRoom() {
         currentA={room.teamA.score}
         currentB={room.teamB.score}
         targetScore={room.targetScore}
+        onSave={async (data) => {
+          await addRound({
+            code: room.code,
+            leadingTeam: data.leadingTeam,
+            pointsA: data.pointsA,
+            pointsB: data.pointsB,
+            note: data.note,
+            enteredBy: "Adam",
+          });
+        }}
       />
 
       {/* Pause modal */}

@@ -15,6 +15,15 @@ export default defineSchema({
     targetScore: v.number(),
     allowSpectators: v.boolean(),
     createdAt: v.number(),
+    scoreA: v.optional(v.number()),
+    scoreB: v.optional(v.number()),
+    currentDealer: v.optional(v.string()),
+    winner: v.optional(
+      v.union(
+        v.literal("A"),
+        v.literal("B"),
+      ),
+    ),
   }).index("by_code", ["code"]),
 
   roomParticipants: defineTable({
@@ -37,5 +46,21 @@ export default defineSchema({
     ),
     canEnterScores: v.boolean(),
     joinedAt: v.number(),
+  }).index("by_room", ["roomId"]),
+
+  rounds: defineTable({
+    roomId: v.id("rooms"),
+    number: v.number(),
+    leadingTeam: v.union(
+      v.literal("A"),
+      v.literal("B"),
+    ),
+    pointsA: v.number(),
+    pointsB: v.number(),
+    scoreAfterA: v.number(),
+    scoreAfterB: v.number(),
+    enteredBy: v.string(),
+    note: v.optional(v.string()),
+    createdAt: v.number(),
   }).index("by_room", ["roomId"]),
 });

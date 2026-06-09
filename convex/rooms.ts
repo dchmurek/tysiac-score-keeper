@@ -41,6 +41,9 @@ export const createRoom = mutation({
       targetScore: 1000,
       allowSpectators: args.allowSpectators,
       createdAt: Date.now(),
+      scoreA: 0,
+      scoreB: 0,
+      currentDealer: args.hostName.trim(),
     });
 
     await ctx.db.insert("roomParticipants", {
@@ -186,6 +189,208 @@ export const getRoomByCode = query({
     return {
       ...room,
       participants,
+    };
+  },
+});
+
+export const getGameRoom = query({
+  args: {
+    code: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      return null;
+    }
+
+    const participants = await ctx.db
+      .query("roomParticipants")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
+    const rounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .order("asc")
+      .collect();
+
+    const teamAPlayers = participants
+      .filter((participant) => participant.team === "A")
+      .map((participant) => ({
+        id: participant._id,
+        name: participant.nickname,
+        isGuest: participant.participantType === "guest",
+      }));
+
+    const teamBPlayers = participants
+      .filter((participant) => participant.team === "B")
+      .map((participant) => ({
+        id: participant._id,
+        name: participant.nickname,
+        isGuest: participant.participantType === "guest",
+      }));
+
+    return {
+      id: room._id,
+      code: room.code,
+      name: room.name,
+      targetScore: room.targetScore,
+      status: room.status,
+      currentDealer: room.currentDealer ?? room.hostName,
+      winner: room.winner,
+
+      teamA: {
+        id: "A" as const,
+        name: "Team A",
+        players: teamAPlayers,
+        score: room.scoreA ?? 0,
+      },
+
+      teamB: {
+        id: "B" as const,
+        name: "Team B",
+        players: teamBPlayers,
+        score: room.scoreB ?? 0,
+      },
+
+      rounds: rounds.map((round) => ({
+        id: round._id,
+        number: round.number,
+        leadingTeam: round.leadingTeam,
+        pointsA: round.pointsA,
+        pointsB: round.pointsB,
+        scoreAfterA: round.scoreAfterA,
+        scoreAfterB: round.scoreAfterB,
+        enteredBy: round.enteredBy,
+        timestamp: new Date(round.createdAt).toISOString(),
+        note: round.note,
+      })),
+    };
+  },
+});
+
+export const addRound = mutation({
+  args: {
+    code: v.string(),
+    leadingTeam: v.union(
+      v.literal("A"),
+      v.literal("B"),
+    ),
+    pointsA: v.number(),
+    pointsB: v.number(),
+    note: v.optional(v.string()),
+    enteredBy: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (room.status !== "active") {
+      throw new Error("This match is not active.");
+    }
+
+    if (!Number.isInteger(args.pointsA) || !Number.isInteger(args.pointsB)) {
+      throw new Error("Round points must be whole numbers.");
+    }
+
+    const currentA = room.scoreA ?? 0;
+    const currentB = room.scoreB ?? 0;
+
+    const applyScoreRule = (
+      currentScore: number,
+      addedPoints: number,
+      didLeadRound: boolean,
+    ) => {
+      const rawScore = currentScore + addedPoints;
+
+      if (rawScore >= room.targetScore) {
+        if (didLeadRound) {
+          return {
+            finalScore: room.targetScore,
+            won: true,
+          };
+        }
+
+        return {
+          finalScore: 990,
+          won: false,
+        };
+      }
+
+      return {
+        finalScore: rawScore,
+        won: false,
+      };
+    };
+
+    const resultA = applyScoreRule(
+      currentA,
+      args.pointsA,
+      args.leadingTeam === "A",
+    );
+
+    const resultB = applyScoreRule(
+      currentB,
+      args.pointsB,
+      args.leadingTeam === "B",
+    );
+
+    const winner =
+      resultA.won
+        ? "A"
+        : resultB.won
+          ? "B"
+          : undefined;
+
+    const existingRounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
+    const roundNumber = existingRounds.length + 1;
+
+    const roundId = await ctx.db.insert("rounds", {
+      roomId: room._id,
+      number: roundNumber,
+      leadingTeam: args.leadingTeam,
+      pointsA: args.pointsA,
+      pointsB: args.pointsB,
+      scoreAfterA: resultA.finalScore,
+      scoreAfterB: resultB.finalScore,
+      enteredBy: args.enteredBy.trim(),
+      note: args.note?.trim() || undefined,
+      createdAt: Date.now(),
+    });
+
+    await ctx.db.patch(room._id, {
+      scoreA: resultA.finalScore,
+      scoreB: resultB.finalScore,
+      status: winner ? "finished" : "active",
+      winner,
+    });
+
+    return {
+      roundId,
+      roundNumber,
+      scoreA: resultA.finalScore,
+      scoreB: resultB.finalScore,
+      winner,
     };
   },
 });

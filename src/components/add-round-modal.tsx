@@ -21,6 +21,12 @@ interface AddRoundModalProps {
   currentA: number;
   currentB: number;
   targetScore?: number;
+  onSave: (data: {
+    leadingTeam: "A" | "B";
+    pointsA: number;
+    pointsB: number;
+    note?: string;
+  }) => Promise<void>;
 }
 
 type Lead = "A" | "B" | null;
@@ -31,7 +37,9 @@ export function AddRoundModal({
   currentA,
   currentB,
   targetScore = 1000,
+  onSave
 }: AddRoundModalProps) {
+  const [isSaving, setIsSaving] = useState(false);
   const [step, setStep] = useState<1 | 2>(1);
   const [lead, setLead] = useState<Lead>(null);
   const [ptsA, setPtsA] = useState("");
@@ -61,14 +69,42 @@ export function AddRoundModal({
   const resultA = applyRule(currentA, numA, lead === "A");
   const resultB = applyRule(currentB, numB, lead === "B");
 
-  const handleSave = () => {
+  const handleSave = async () => {
     if (!lead) return;
-    toast.success(`Round saved — Team A ${resultA.final} / Team B ${resultB.final}`);
-    if (resultA.won || resultB.won) {
-      toast.success(`Team ${resultA.won ? "A" : "B"} wins! Match ended.`);
+
+    try {
+      setIsSaving(true);
+
+      await onSave({
+        leadingTeam: lead,
+        pointsA: numA,
+        pointsB: numB,
+        note: note.trim() || undefined,
+      });
+
+      toast.success(
+        `Round saved — Team A ${resultA.final} / Team B ${resultB.final}`,
+      );
+
+      if (resultA.won || resultB.won) {
+        toast.success(
+          `Team ${resultA.won ? "A" : "B"} wins! Match ended.`,
+        );
+      }
+
+      reset();
+      onOpenChange(false);
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not save the round.",
+      );
+    } finally {
+      setIsSaving(false);
     }
-    reset();
-    onOpenChange(false);
   };
 
   return (
@@ -120,11 +156,15 @@ export function AddRoundModal({
                 </Label>
                 <Input
                   id="ptsA"
-                  inputMode="numeric"
+                  inputMode="text"
                   pattern="[0-9]*"
                   className="mt-2 h-14 text-center text-2xl font-bold tabular-nums"
                   value={ptsA}
-                  onChange={(e) => setPtsA(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => {
+                    if (/^-?\d*$/.test(e.target.value)) {
+                      setPtsA(e.target.value);
+                    }
+                  }}
                   placeholder="0"
                 />
               </div>
@@ -134,11 +174,15 @@ export function AddRoundModal({
                 </Label>
                 <Input
                   id="ptsB"
-                  inputMode="numeric"
+                  inputMode="text"
                   pattern="[0-9]*"
                   className="mt-2 h-14 text-center text-2xl font-bold tabular-nums"
                   value={ptsB}
-                  onChange={(e) => setPtsB(e.target.value.replace(/\D/g, ""))}
+                  onChange={(e) => {
+                    if (/^-?\d*$/.test(e.target.value)) {
+                      setPtsB(e.target.value);
+                    }
+                  }}
                   placeholder="0"
                 />
               </div>
@@ -219,8 +263,12 @@ export function AddRoundModal({
               <Button variant="outline" onClick={() => setStep(1)} className="flex-1">
                 Back
               </Button>
-              <Button onClick={handleSave} className="flex-1">
-                Save Round
+              <Button
+                onClick={handleSave}
+                className="flex-1"
+                disabled={isSaving}
+              >
+                {isSaving ? "Saving..." : "Save Round"}
               </Button>
             </div>
           )}
