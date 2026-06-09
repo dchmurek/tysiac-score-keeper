@@ -13,6 +13,8 @@ import { Check, Plus, Shuffle, RotateCw, Users, Search, X } from "lucide-react";
 import { users } from "@/lib/mock-data";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
 
 export const Route = createFileRoute("/create-room")({
   head: () => ({ meta: [{ title: "Create Room — Tysiac Score" }] }),
@@ -29,6 +31,15 @@ interface DraftPlayer {
 
 function CreateRoom() {
   const navigate = useNavigate();
+  const createRoom = useMutation(api.rooms.createRoom);
+
+  const [createdRoom, setCreatedRoom] = useState<{
+    roomId: string;
+    code: string;
+  } | null>(null);
+
+  const [isCreating, setIsCreating] = useState(false);
+  const [allowSpectators, setAllowSpectators] = useState(true);
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
   const [name, setName] = useState("Saturday Match");
   const [target, setTarget] = useState(1000);
@@ -66,6 +77,37 @@ function CreateRoom() {
     setPlayers(
       players.map((p) => ({ ...p, team: p.team === "A" ? "B" : p.team === "B" ? "A" : undefined })),
     );
+
+  const handleNextStep = async () => {
+    if (step !== 1) {
+      setStep((currentStep) => (currentStep + 1) as typeof step);
+      return;
+    }
+
+    if (!name.trim()) {
+      toast.error("Enter a room name.");
+      return;
+    }
+
+    try {
+      setIsCreating(true);
+
+      const room = await createRoom({
+        name: name.trim(),
+        hostName: "Daniel",
+        allowSpectators,
+      });
+
+      setCreatedRoom(room);
+      setStep(2);
+      toast.success(`Room created. Code: ${room.code}`);
+    } catch (error) {
+      console.error(error);
+      toast.error("Could not create the room.");
+    } finally {
+      setIsCreating(false);
+    }
+  };
 
   return (
     <AppShell>
@@ -116,13 +158,26 @@ function CreateRoom() {
               </div>
               <div>
                 <Label htmlFor="target">Target Score</Label>
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div>
+                    <p className="text-sm font-semibold">Allow spectators</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Spectators can join the room and watch the score.
+                    </p>
+                  </div>
+
+                  <Switch
+                    checked={allowSpectators}
+                    onCheckedChange={setAllowSpectators}
+                  />
+                </div>
                 <Input
                   id="target"
                   type="number"
                   inputMode="numeric"
                   className="mt-2 h-11 tabular-nums"
                   value={target}
-                  onChange={(e) => setTarget(Number(e.target.value))}
+                  readOnly
                 />
                 <p className="mt-1 text-xs text-muted-foreground">
                   Default 1000. First team to reach this while leading wins.
@@ -182,7 +237,7 @@ function CreateRoom() {
                 </div>
               </div>
 
-              <RoomCodeCard code="K8P2" />
+              <RoomCodeCard code={createdRoom?.code ?? "----"} />
 
               <div>
                 <p className="text-sm font-semibold">Players ({players.length})</p>
@@ -318,14 +373,26 @@ function CreateRoom() {
               </Link>
             )}
             {step < 4 ? (
-              <Button onClick={() => setStep((s) => (s + 1) as typeof step)}>
-                {step === 1 ? "Create Room" : step === 2 ? "Continue" : "Confirm Teams"}
+              <Button onClick={handleNextStep} disabled={isCreating}>
+                {isCreating
+                  ? "Creating..."
+                  : step === 1
+                    ? "Create Room"
+                    : step === 2
+                      ? "Continue"
+                      : "Confirm Teams"}
               </Button>
             ) : (
               <Button
+                disabled={!createdRoom}
                 onClick={() => {
+                  if (!createdRoom) return;
+
                   toast.success("Room ready — let's play!");
-                  navigate({ to: "/room/$roomId", params: { roomId: "r-active" } });
+                  navigate({
+                    to: "/room/$roomId",
+                    params: { roomId: createdRoom.code },
+                  });
                 }}
               >
                 Start Match
