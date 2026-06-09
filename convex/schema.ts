@@ -29,6 +29,12 @@ export default defineSchema({
       v.literal("player"),
       v.literal("spectator"),
     ),
+    team: v.optional(
+      v.union(
+        v.literal("A"),
+        v.literal("B"),
+      ),
+    ),
     canEnterScores: v.boolean(),
     joinedAt: v.number(),
   }).index("by_room", ["roomId"]),

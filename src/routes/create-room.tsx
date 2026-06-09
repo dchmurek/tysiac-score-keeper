@@ -25,6 +25,7 @@ interface DraftPlayer {
   id: string;
   name: string;
   isGuest: boolean;
+  isHost?: boolean;
   canScore: boolean;
   team?: "A" | "B";
 }
@@ -32,6 +33,8 @@ interface DraftPlayer {
 function CreateRoom() {
   const navigate = useNavigate();
   const createRoom = useMutation(api.rooms.createRoom);
+  const startRoom = useMutation(api.rooms.startRoom);
+  const [isStarting, setIsStarting] = useState(false);
 
   const [createdRoom, setCreatedRoom] = useState<{
     roomId: string;
@@ -44,7 +47,14 @@ function CreateRoom() {
   const [name, setName] = useState("Saturday Match");
   const [target, setTarget] = useState(1000);
   const [players, setPlayers] = useState<DraftPlayer[]>([
-    { id: "u-adam", name: "Adam", isGuest: false, canScore: true, team: "A" },
+    {
+      id: "u-adam",
+      name: "Adam",
+      isGuest: false,
+      isHost: true,
+      canScore: true,
+      team: "A",
+    },
   ]);
   const [search, setSearch] = useState("");
   const [guestName, setGuestName] = useState("");
@@ -106,6 +116,58 @@ function CreateRoom() {
       toast.error("Could not create the room.");
     } finally {
       setIsCreating(false);
+    }
+  };
+
+  const handleStartMatch = async () => {
+    if (!createdRoom) {
+      toast.error("Create the room first.");
+      return;
+    }
+
+    if (players.length !== 4) {
+      toast.error("Exactly four players are required.");
+      return;
+    }
+
+    const teamA = players.filter((player) => player.team === "A");
+    const teamB = players.filter((player) => player.team === "B");
+
+    if (teamA.length !== 2 || teamB.length !== 2) {
+      toast.error("Each team must contain exactly two players.");
+      return;
+    }
+
+    try {
+      setIsStarting(true);
+
+      await startRoom({
+        code: createdRoom.code,
+        players: players.map((player) => ({
+          nickname: player.name,
+          participantType: player.isGuest ? "guest" : "account",
+          team: player.team as "A" | "B",
+          canEnterScores: player.canScore,
+          isHost: Boolean(player.isHost),
+        })),
+      });
+
+      toast.success("Room ready — let's play!");
+
+      navigate({
+        to: "/room/$roomId",
+        params: { roomId: createdRoom.code },
+      });
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not start the match.",
+      );
+    } finally {
+      setIsStarting(false);
     }
   };
 
@@ -384,18 +446,10 @@ function CreateRoom() {
               </Button>
             ) : (
               <Button
-                disabled={!createdRoom}
-                onClick={() => {
-                  if (!createdRoom) return;
-
-                  toast.success("Room ready — let's play!");
-                  navigate({
-                    to: "/room/$roomId",
-                    params: { roomId: createdRoom.code },
-                  });
-                }}
+                onClick={handleStartMatch}
+                disabled={isStarting || !createdRoom}
               >
-                Start Match
+                {isStarting ? "Starting..." : "Start Match"}
               </Button>
             )}
           </div>
