@@ -58,6 +58,8 @@ function GameRoom() {
   const discardRoom = useMutation(api.rooms.discardRoom);
   const correctRound = useMutation(api.rooms.correctRound);
   const leaveRoom = useMutation(api.rooms.leaveRoom);
+  const assignParticipantToTeam = useMutation(api.rooms.assignParticipantToTeam);
+  const removeParticipantFromRoom = useMutation(api.rooms.removeParticipantFromRoom);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showPause, setShowPause] = useState(false);
@@ -134,6 +136,72 @@ function GameRoom() {
     }
   };
 
+  const handleAssignParticipant = async (
+    participantId: any,
+    team?: "A" | "B",
+  ) => {
+    try {
+      await assignParticipantToTeam({
+        code: room.code,
+        participantId,
+        team,
+      });
+
+      toast.success(
+        team ? `Player assigned to Team ${team}.` : "Player unassigned.",
+      );
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not assign player.",
+      );
+    }
+  };
+
+  const handleRemoveParticipant = async (participantId: any) => {
+    try {
+      await removeParticipantFromRoom({
+        code: room.code,
+        participantId,
+      });
+
+      toast.success("Player removed from the room.");
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not remove player.",
+      );
+    }
+  };
+
+  const teamAPlayers = room.participants.filter(
+    (participant) => participant.team === "A",
+  );
+
+  const teamBPlayers = room.participants.filter(
+    (participant) => participant.team === "B",
+  );
+
+  const unassignedPlayers = room.participants.filter(
+    (participant) =>
+      participant.role !== "spectator" &&
+      participant.team !== "A" &&
+      participant.team !== "B",
+  );
+
+  const spectators = room.participants.filter(
+    (participant) => participant.role === "spectator",
+  );
+
+  const canStartMatch =
+    teamAPlayers.length === 2 && teamBPlayers.length === 2;
+
   if (room.status === "waiting") {
     return (
       <AppShell>
@@ -163,55 +231,201 @@ function GameRoom() {
           </Card>
 
           <Card className="mt-4 p-5">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-wrap items-center justify-between gap-3">
               <div>
                 <h2 className="font-display text-lg font-bold">
-                  Participants
+                  Lobby
                 </h2>
                 <p className="mt-1 text-sm text-muted-foreground">
-                  {room.participants.length} joined
+                  Assign players to teams before starting the match.
                 </p>
+              </div>
+
+              <Badge variant={canStartMatch ? "default" : "secondary"}>
+                {teamAPlayers.length}/2 Team A · {teamBPlayers.length}/2 Team B
+              </Badge>
+            </div>
+
+            <div className="mt-5 grid gap-4 lg:grid-cols-3">
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="font-semibold">Unassigned</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Players waiting for a team
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  {unassignedPlayers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No unassigned players.
+                    </p>
+                  ) : (
+                    unassignedPlayers.map((participant) => (
+                      <div
+                        key={participant.id}
+                        className="rounded-lg border border-border p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium">{participant.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {participant.role} · {participant.participantType}
+                            </p>
+                          </div>
+
+                          {participant.role !== "host" && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                handleRemoveParticipant(participant.id)
+                              }
+                            >
+                              Remove
+                            </Button>
+                          )}
+                        </div>
+
+                        <div className="mt-3 grid grid-cols-2 gap-2">
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={teamAPlayers.length >= 2}
+                            onClick={() =>
+                              handleAssignParticipant(participant.id, "A")
+                            }
+                          >
+                            Team A
+                          </Button>
+
+                          <Button
+                            size="sm"
+                            variant="outline"
+                            disabled={teamBPlayers.length >= 2}
+                            onClick={() =>
+                              handleAssignParticipant(participant.id, "B")
+                            }
+                          >
+                            Team B
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="font-semibold">Team A</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Needs exactly 2 players
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  {teamAPlayers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No players yet.
+                    </p>
+                  ) : (
+                    teamAPlayers.map((participant) => (
+                      <div
+                        key={participant.id}
+                        className="rounded-lg border border-border p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium">{participant.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {participant.role} · {participant.participantType}
+                            </p>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              handleAssignParticipant(participant.id, undefined)
+                            }
+                          >
+                            Unassign
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
+              </div>
+
+              <div className="rounded-xl border border-border bg-card p-4">
+                <h3 className="font-semibold">Team B</h3>
+                <p className="mt-1 text-xs text-muted-foreground">
+                  Needs exactly 2 players
+                </p>
+
+                <div className="mt-4 space-y-3">
+                  {teamBPlayers.length === 0 ? (
+                    <p className="text-sm text-muted-foreground">
+                      No players yet.
+                    </p>
+                  ) : (
+                    teamBPlayers.map((participant) => (
+                      <div
+                        key={participant.id}
+                        className="rounded-lg border border-border p-3"
+                      >
+                        <div className="flex items-start justify-between gap-2">
+                          <div>
+                            <p className="font-medium">{participant.name}</p>
+                            <p className="text-xs text-muted-foreground">
+                              {participant.role} · {participant.participantType}
+                            </p>
+                          </div>
+
+                          <Button
+                            size="sm"
+                            variant="ghost"
+                            onClick={() =>
+                              handleAssignParticipant(participant.id, undefined)
+                            }
+                          >
+                            Unassign
+                          </Button>
+                        </div>
+                      </div>
+                    ))
+                  )}
+                </div>
               </div>
             </div>
 
-            <div className="mt-4 grid gap-3 sm:grid-cols-2">
-              {room.participants.map((participant) => (
-                <div
-                  key={participant.id}
-                  className="rounded-lg border border-border bg-card p-4"
-                >
-                  <div className="flex items-center justify-between gap-3">
-                    <div>
-                      <p className="font-semibold">{participant.name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {participant.participantType === "guest"
-                          ? "Guest"
-                          : "Account"}
-                      </p>
-                    </div>
+            {spectators.length > 0 && (
+              <div className="mt-5 rounded-xl border border-border bg-secondary/40 p-4">
+                <h3 className="font-semibold">Spectators</h3>
 
-                    <div className="flex flex-col items-end gap-1">
-                      <Badge
-                        variant={
-                          participant.role === "host"
-                            ? "default"
-                            : "secondary"
-                        }
-                        className="capitalize"
+                <div className="mt-3 grid gap-2 sm:grid-cols-2">
+                  {spectators.map((participant) => (
+                    <div
+                      key={participant.id}
+                      className="flex items-center justify-between rounded-lg border border-border bg-card p-3"
+                    >
+                      <div>
+                        <p className="font-medium">{participant.name}</p>
+                        <p className="text-xs text-muted-foreground">
+                          {participant.participantType}
+                        </p>
+                      </div>
+
+                      <Button
+                        size="sm"
+                        variant="ghost"
+                        onClick={() => handleRemoveParticipant(participant.id)}
                       >
-                        {participant.role}
-                      </Badge>
-
-                      {participant.canEnterScores && (
-                        <span className="text-[11px] text-muted-foreground">
-                          Can enter scores
-                        </span>
-                      )}
+                        Remove
+                      </Button>
                     </div>
-                  </div>
+                  ))}
                 </div>
-              ))}
-            </div>
+              </div>
+            )}
           </Card>
 
           <Card className="mt-4 p-5 text-center">

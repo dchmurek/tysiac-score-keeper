@@ -860,3 +860,86 @@ export const leaveRoom = mutation({
     };
   },
 });
+
+export const assignParticipantToTeam = mutation({
+  args: {
+    code: v.string(),
+    participantId: v.id("roomParticipants"),
+    team: v.optional(v.union(v.literal("A"), v.literal("B"))),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (room.status !== "waiting") {
+      throw new Error("Teams can only be changed before the match starts.");
+    }
+
+    const participant = await ctx.db.get(args.participantId);
+
+    if (!participant || participant.roomId !== room._id) {
+      throw new Error("Participant not found.");
+    }
+
+    if (participant.role === "spectator") {
+      throw new Error("Spectators cannot be assigned to a team.");
+    }
+
+    await ctx.db.patch(participant._id, {
+      team: args.team,
+    });
+
+    return {
+      ok: true,
+    };
+  },
+});
+
+export const removeParticipantFromRoom = mutation({
+  args: {
+    code: v.string(),
+    participantId: v.id("roomParticipants"),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (room.status !== "waiting") {
+      throw new Error("Players can only be removed before the match starts.");
+    }
+
+    const participant = await ctx.db.get(args.participantId);
+
+    if (!participant || participant.roomId !== room._id) {
+      throw new Error("Participant not found.");
+    }
+
+    if (participant.role === "host") {
+      throw new Error("Host cannot be removed from the room.");
+    }
+
+    await ctx.db.delete(participant._id);
+
+    return {
+      ok: true,
+    };
+  },
+});
