@@ -8,6 +8,9 @@ import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Plus, LogIn, QrCode, Smartphone, BarChart3, Users } from "lucide-react";
 import { toast } from "sonner";
+import { useMutation } from "convex/react";
+import { api } from "../../convex/_generated/api";
+import { useNavigate } from "@tanstack/react-router";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -27,6 +30,59 @@ function Landing() {
   const [code, setCode] = useState("");
   const [nick, setNick] = useState("");
   const [role, setRole] = useState<"player" | "spectator">("player");
+  const navigate = useNavigate();
+  const joinRoomAsGuest = useMutation(api.rooms.joinRoomAsGuest);
+  const [isJoining, setIsJoining] = useState(false);
+
+  const handleJoinRoom = async () => {
+    if (!code.trim()) {
+      toast.error("Enter a room code.");
+      return;
+    }
+
+    if (!nick.trim()) {
+      toast.error("Enter your nickname.");
+      return;
+    }
+
+    try {
+      setIsJoining(true);
+
+      const result = await joinRoomAsGuest({
+        code: code.trim().toUpperCase(),
+        nickname: nick.trim(),
+        role,
+      });
+
+      sessionStorage.setItem(
+        `tysiac-participant-${result.roomCode}`,
+        String(result.participantId),
+      );
+
+      toast.success(
+        result.role === "player"
+          ? "Joined the room as player."
+          : "Joined the room as spectator.",
+      );
+
+      navigate({
+        to: "/room/$roomId",
+        params: {
+          roomId: result.roomCode,
+        },
+      });
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not join the room.",
+      );
+    } finally {
+      setIsJoining(false);
+    }
+  };
 
   return (
     <div className="min-h-screen felt-gradient">
@@ -54,7 +110,7 @@ function Landing() {
               </Link>
               <a href="#join">
                 <Button size="lg" variant="outline" className="h-12 px-6 text-base">
-                  <LogIn className="h-5 w-5" /> Join Room
+                  Join Room
                 </Button>
               </a>
             </div>
@@ -150,8 +206,12 @@ function Landing() {
                   ))}
                 </RadioGroup>
               </div>
-              <Button type="submit" className="h-12 w-full text-base">
-                Join Room
+              <Button
+                className="h-12 w-full"
+                onClick={handleJoinRoom}
+                disabled={isJoining}
+              >
+                {isJoining ? "Joining..." : "Join Room"}
               </Button>
               <p className="text-center text-xs text-muted-foreground">
                 Need an account?{" "}

@@ -57,6 +57,7 @@ function GameRoom() {
   const undoLastRound = useMutation(api.rooms.undoLastRound);
   const discardRoom = useMutation(api.rooms.discardRoom);
   const correctRound = useMutation(api.rooms.correctRound);
+  const leaveRoom = useMutation(api.rooms.leaveRoom);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showPause, setShowPause] = useState(false);
@@ -100,6 +101,139 @@ function GameRoom() {
   const leading =
     room.teamA.score > room.teamB.score ? "A" : room.teamB.score > room.teamA.score ? "B" : null;
   const lastRound = room.rounds[room.rounds.length - 1];
+
+  const handleLeaveLobby = async () => {
+    const storedParticipantId = sessionStorage.getItem(
+      `tysiac-participant-${room.code}`,
+    );
+
+    if (!storedParticipantId) {
+      navigate({ to: "/" });
+      return;
+    }
+
+    try {
+      await leaveRoom({
+        code: room.code,
+        participantId: storedParticipantId as any,
+      });
+
+      sessionStorage.removeItem(`tysiac-participant-${room.code}`);
+
+      toast.success("You left the room.");
+
+      navigate({ to: "/" });
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not leave the room.",
+      );
+    }
+  };
+
+  if (room.status === "waiting") {
+    return (
+      <AppShell>
+        <div className="mx-auto max-w-4xl px-4 py-6 sm:px-6">
+          <Card className="p-5">
+            <div className="flex flex-wrap items-start justify-between gap-4">
+              <div>
+                <div className="flex items-center gap-2">
+                  <h1 className="font-display text-2xl font-bold">
+                    {room.name}
+                  </h1>
+                  <Badge variant="secondary">Waiting</Badge>
+                </div>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Players can join with the room code before the host starts the match.
+                </p>
+              </div>
+
+              <div className="rounded-lg border border-border bg-secondary px-4 py-2">
+                <p className="text-xs text-muted-foreground">Room code</p>
+                <p className="font-mono text-2xl font-bold tracking-widest">
+                  {room.code}
+                </p>
+              </div>
+            </div>
+          </Card>
+
+          <Card className="mt-4 p-5">
+            <div className="flex items-center justify-between">
+              <div>
+                <h2 className="font-display text-lg font-bold">
+                  Participants
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  {room.participants.length} joined
+                </p>
+              </div>
+            </div>
+
+            <div className="mt-4 grid gap-3 sm:grid-cols-2">
+              {room.participants.map((participant) => (
+                <div
+                  key={participant.id}
+                  className="rounded-lg border border-border bg-card p-4"
+                >
+                  <div className="flex items-center justify-between gap-3">
+                    <div>
+                      <p className="font-semibold">{participant.name}</p>
+                      <p className="text-xs text-muted-foreground">
+                        {participant.participantType === "guest"
+                          ? "Guest"
+                          : "Account"}
+                      </p>
+                    </div>
+
+                    <div className="flex flex-col items-end gap-1">
+                      <Badge
+                        variant={
+                          participant.role === "host"
+                            ? "default"
+                            : "secondary"
+                        }
+                        className="capitalize"
+                      >
+                        {participant.role}
+                      </Badge>
+
+                      {participant.canEnterScores && (
+                        <span className="text-[11px] text-muted-foreground">
+                          Can enter scores
+                        </span>
+                      )}
+                    </div>
+                  </div>
+                </div>
+              ))}
+            </div>
+          </Card>
+
+          <Card className="mt-4 p-5 text-center">
+            <h2 className="font-display text-lg font-bold">
+              Waiting for the host
+            </h2>
+            <p className="mt-2 text-sm text-muted-foreground">
+              The match will start when the host assigns teams and starts the game.
+            </p>
+
+            <Button
+              variant="outline"
+              className="mt-4"
+              onClick={handleLeaveLobby}
+            >
+              Back to home
+            </Button>
+          </Card>
+        </div>
+      </AppShell>
+    );
+  }
 
   const handleUndoLastRound = async () => {
     const confirmed = window.confirm(

@@ -272,6 +272,14 @@ export const getGameRoom = query({
       status: room.status,
       currentDealer: room.currentDealer ?? room.hostName,
       winner: room.winner,
+      participants: participants.map((participant) => ({
+        id: participant._id,
+        name: participant.nickname,
+        role: participant.role,
+        participantType: participant.participantType,
+        team: participant.team,
+        canEnterScores: participant.canEnterScores,
+      })),
 
       teamA: {
         id: "A" as const,
@@ -738,6 +746,117 @@ export const correctRound = mutation({
       scoreB,
       winner,
       winningRoundNumber,
+    };
+  },
+});
+
+export const joinRoomAsGuest = mutation({
+  args: {
+    code: v.string(),
+    nickname: v.string(),
+    role: v.union(v.literal("player"), v.literal("spectator")),
+  },
+
+  handler: async (ctx, args) => {
+    const code = args.code.trim().toUpperCase();
+    const nickname = args.nickname.trim();
+
+    if (!nickname) {
+      throw new Error("Nickname is required.");
+    }
+
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) => q.eq("code", code))
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (args.role === "player" && room.status !== "waiting") {
+      throw new Error("Players can only join before the match starts.");
+    }
+
+    if (args.role === "spectator" && !room.allowSpectators) {
+      throw new Error("Spectators are not allowed in this room.");
+    }
+
+    const existingParticipants = await ctx.db
+      .query("roomParticipants")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
+    const nicknameTaken = existingParticipants.some(
+      (participant) =>
+        participant.nickname.toLowerCase() === nickname.toLowerCase(),
+    );
+
+    if (nicknameTaken) {
+      throw new Error("This nickname is already used in the room.");
+    }
+
+    if (args.role === "player") {
+      const playersCount = existingParticipants.filter(
+        (participant) => participant.role === "host" || participant.role === "player",
+      ).length;
+
+      if (playersCount >= 4) {
+        throw new Error("This room already has four players.");
+      }
+    }
+
+    const participantId = await ctx.db.insert("roomParticipants", {
+      roomId: room._id,
+      nickname,
+      participantType: "guest",
+      role: args.role,
+      canEnterScores: false,
+      joinedAt: Date.now(),
+    });
+
+    return {
+      participantId,
+      roomCode: room.code,
+      role: args.role,
+    };
+  },
+});
+
+export const leaveRoom = mutation({
+  args: {
+    code: v.string(),
+    participantId: v.id("roomParticipants"),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    const participant = await ctx.db.get(args.participantId);
+
+    if (!participant || participant.roomId !== room._id) {
+      return {
+        left: false,
+      };
+    }
+
+    if (participant.role === "host") {
+      throw new Error("Host cannot leave the room this way.");
+    }
+
+    await ctx.db.delete(participant._id);
+
+    return {
+      left: true,
     };
   },
 });
