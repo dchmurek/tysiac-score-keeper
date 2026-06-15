@@ -62,5 +62,21 @@ export default defineSchema({
     enteredBy: v.string(),
     note: v.optional(v.string()),
     createdAt: v.number(),
+    updatedAt: v.optional(v.number()),
   }).index("by_room", ["roomId"]),
+
+  roundCorrections: defineTable({
+    roomId: v.id("rooms"),
+    roundId: v.id("rounds"),
+    roundNumber: v.number(),
+    oldPointsA: v.number(),
+    oldPointsB: v.number(),
+    newPointsA: v.number(),
+    newPointsB: v.number(),
+    reason: v.optional(v.string()),
+    enteredBy: v.string(),
+    createdAt: v.number(),
+  })
+    .index("by_room", ["roomId"])
+    .index("by_round", ["roundId"]),
 });

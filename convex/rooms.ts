@@ -14,6 +14,34 @@ function generateRoomCode(length = 4): string {
   return code;
 }
 
+function applyScoreRule(
+  currentScore: number,
+  addedPoints: number,
+  didLeadRound: boolean,
+  targetScore: number,
+) {
+  const rawScore = currentScore + addedPoints;
+
+  if (rawScore >= targetScore) {
+    if (didLeadRound) {
+      return {
+        finalScore: targetScore,
+        won: true,
+      };
+    }
+
+    return {
+      finalScore: 990,
+      won: false,
+    };
+  }
+
+  return {
+    finalScore: Math.max(0, rawScore),
+    won: false,
+  };
+}
+
 export const createRoom = mutation({
   args: {
     name: v.string(),
@@ -40,10 +68,10 @@ export const createRoom = mutation({
       status: "waiting",
       targetScore: 1000,
       allowSpectators: args.allowSpectators,
-      createdAt: Date.now(),
       scoreA: 0,
       scoreB: 0,
       currentDealer: args.hostName.trim(),
+      createdAt: Date.now(),
     });
 
     await ctx.db.insert("roomParticipants", {
@@ -68,14 +96,8 @@ export const startRoom = mutation({
     players: v.array(
       v.object({
         nickname: v.string(),
-        participantType: v.union(
-          v.literal("account"),
-          v.literal("guest"),
-        ),
-        team: v.union(
-          v.literal("A"),
-          v.literal("B"),
-        ),
+        participantType: v.union(v.literal("account"), v.literal("guest")),
+        team: v.union(v.literal("A"), v.literal("B")),
         canEnterScores: v.boolean(),
         isHost: v.boolean(),
       }),
@@ -221,6 +243,11 @@ export const getGameRoom = query({
       .order("asc")
       .collect();
 
+    const corrections = await ctx.db
+      .query("roundCorrections")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
     const teamAPlayers = participants
       .filter((participant) => participant.team === "A")
       .map((participant) => ({
@@ -271,6 +298,19 @@ export const getGameRoom = query({
         enteredBy: round.enteredBy,
         timestamp: new Date(round.createdAt).toISOString(),
         note: round.note,
+        corrections: corrections
+          .filter((correction) => correction.roundId === round._id)
+          .sort((a, b) => a.createdAt - b.createdAt)
+          .map((correction) => ({
+            id: correction._id,
+            oldPointsA: correction.oldPointsA,
+            oldPointsB: correction.oldPointsB,
+            newPointsA: correction.newPointsA,
+            newPointsB: correction.newPointsB,
+            reason: correction.reason,
+            enteredBy: correction.enteredBy,
+            timestamp: new Date(correction.createdAt).toISOString(),
+          })),
       })),
     };
   },
@@ -279,10 +319,7 @@ export const getGameRoom = query({
 export const addRound = mutation({
   args: {
     code: v.string(),
-    leadingTeam: v.union(
-      v.literal("A"),
-      v.literal("B"),
-    ),
+    leadingTeam: v.union(v.literal("A"), v.literal("B")),
     pointsA: v.number(),
     pointsB: v.number(),
     note: v.optional(v.string()),
@@ -302,12 +339,6 @@ export const addRound = mutation({
     }
 
     if (room.status !== "active") {
-
-      throw new Error("Only an active match can be modified.");
-
-    }
-
-    if (room.status !== "active") {
       throw new Error("This match is not active.");
     }
 
@@ -318,51 +349,21 @@ export const addRound = mutation({
     const currentA = room.scoreA ?? 0;
     const currentB = room.scoreB ?? 0;
 
-    const applyScoreRule = (
-      currentScore: number,
-      addedPoints: number,
-      didLeadRound: boolean,
-    ) => {
-      const rawScore = currentScore + addedPoints;
-
-      if (rawScore >= room.targetScore) {
-        if (didLeadRound) {
-          return {
-            finalScore: room.targetScore,
-            won: true,
-          };
-        }
-
-        return {
-          finalScore: 990,
-          won: false,
-        };
-      }
-
-      return {
-        finalScore: rawScore,
-        won: false,
-      };
-    };
-
     const resultA = applyScoreRule(
       currentA,
       args.pointsA,
       args.leadingTeam === "A",
+      room.targetScore,
     );
 
     const resultB = applyScoreRule(
       currentB,
       args.pointsB,
       args.leadingTeam === "B",
+      room.targetScore,
     );
 
-    const winner =
-      resultA.won
-        ? "A"
-        : resultB.won
-          ? "B"
-          : undefined;
+    const winner = resultA.won ? "A" : resultB.won ? "B" : undefined;
 
     const existingRounds = await ctx.db
       .query("rounds")
@@ -480,6 +481,10 @@ export const undoLastRound = mutation({
       throw new Error("Room not found.");
     }
 
+    if (room.status !== "active") {
+      throw new Error("Only an active match can be modified.");
+    }
+
     const lastRound = await ctx.db
       .query("rounds")
       .withIndex("by_room", (q) => q.eq("roomId", room._id))
@@ -488,6 +493,15 @@ export const undoLastRound = mutation({
 
     if (!lastRound) {
       throw new Error("There is no round to undo.");
+    }
+
+    const lastRoundCorrections = await ctx.db
+      .query("roundCorrections")
+      .withIndex("by_round", (q) => q.eq("roundId", lastRound._id))
+      .collect();
+
+    for (const correction of lastRoundCorrections) {
+      await ctx.db.delete(correction._id);
     }
 
     await ctx.db.delete(lastRound._id);
@@ -533,6 +547,19 @@ export const discardRoom = mutation({
       throw new Error("Room not found.");
     }
 
+    if (room.status === "finished") {
+      throw new Error("A finished match cannot be discarded.");
+    }
+
+    const corrections = await ctx.db
+      .query("roundCorrections")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
+    for (const correction of corrections) {
+      await ctx.db.delete(correction._id);
+    }
+
     const rounds = await ctx.db
       .query("rounds")
       .withIndex("by_room", (q) => q.eq("roomId", room._id))
@@ -555,6 +582,162 @@ export const discardRoom = mutation({
 
     return {
       discarded: true,
+    };
+  },
+});
+
+export const correctRound = mutation({
+  args: {
+    code: v.string(),
+    roundId: v.id("rounds"),
+    pointsA: v.number(),
+    pointsB: v.number(),
+    reason: v.optional(v.string()),
+    enteredBy: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (room.status !== "active") {
+      throw new Error("Only an active match can be modified.");
+    }
+
+    if (!Number.isInteger(args.pointsA) || !Number.isInteger(args.pointsB)) {
+      throw new Error("Round points must be whole numbers.");
+    }
+
+    const targetRound = await ctx.db.get(args.roundId);
+
+    if (!targetRound || targetRound.roomId !== room._id) {
+      throw new Error("Round not found in this room.");
+    }
+
+    const allRounds = await ctx.db
+      .query("rounds")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .order("asc")
+      .collect();
+
+    const correctedRounds = allRounds.map((round) =>
+      round._id === args.roundId
+        ? {
+          ...round,
+          pointsA: args.pointsA,
+          pointsB: args.pointsB,
+        }
+        : round,
+    );
+
+    let scoreA = 0;
+    let scoreB = 0;
+    let winner: "A" | "B" | undefined;
+    let winningRoundNumber: number | undefined;
+
+    const recalculatedRounds = [];
+
+    for (const round of correctedRounds) {
+      if (winner) {
+        break;
+      }
+
+      const resultA = applyScoreRule(
+        scoreA,
+        round.pointsA,
+        round.leadingTeam === "A",
+        room.targetScore,
+      );
+
+      const resultB = applyScoreRule(
+        scoreB,
+        round.pointsB,
+        round.leadingTeam === "B",
+        room.targetScore,
+      );
+
+      scoreA = resultA.finalScore;
+      scoreB = resultB.finalScore;
+
+      if (resultA.won) {
+        winner = "A";
+        winningRoundNumber = round.number;
+      } else if (resultB.won) {
+        winner = "B";
+        winningRoundNumber = round.number;
+      }
+
+      recalculatedRounds.push({
+        id: round._id,
+        pointsA: round.pointsA,
+        pointsB: round.pointsB,
+        scoreAfterA: scoreA,
+        scoreAfterB: scoreB,
+      });
+    }
+
+    await ctx.db.insert("roundCorrections", {
+      roomId: room._id,
+      roundId: targetRound._id,
+      roundNumber: targetRound.number,
+      oldPointsA: targetRound.pointsA,
+      oldPointsB: targetRound.pointsB,
+      newPointsA: args.pointsA,
+      newPointsB: args.pointsB,
+      reason: args.reason?.trim() || undefined,
+      enteredBy: args.enteredBy.trim(),
+      createdAt: Date.now(),
+    });
+
+    for (const round of recalculatedRounds) {
+      await ctx.db.patch(round.id, {
+        pointsA: round.pointsA,
+        pointsB: round.pointsB,
+        scoreAfterA: round.scoreAfterA,
+        scoreAfterB: round.scoreAfterB,
+        updatedAt: Date.now(),
+      });
+    }
+
+    if (winner && winningRoundNumber !== undefined) {
+      const roundsAfterWin = allRounds.filter(
+        (round) => round.number > winningRoundNumber,
+      );
+
+      for (const round of roundsAfterWin) {
+        const roundCorrections = await ctx.db
+          .query("roundCorrections")
+          .withIndex("by_round", (q) => q.eq("roundId", round._id))
+          .collect();
+
+        for (const correction of roundCorrections) {
+          await ctx.db.delete(correction._id);
+        }
+
+        await ctx.db.delete(round._id);
+      }
+    }
+
+    await ctx.db.patch(room._id, {
+      scoreA,
+      scoreB,
+      winner,
+      status: winner ? "finished" : "active",
+    });
+
+    return {
+      scoreA,
+      scoreB,
+      winner,
+      winningRoundNumber,
     };
   },
 });

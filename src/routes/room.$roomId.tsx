@@ -56,11 +56,12 @@ function GameRoom() {
   const resumeRoom = useMutation(api.rooms.resumeRoom);
   const undoLastRound = useMutation(api.rooms.undoLastRound);
   const discardRoom = useMutation(api.rooms.discardRoom);
+  const correctRound = useMutation(api.rooms.correctRound);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showPause, setShowPause] = useState(false);
   const [showFinish, setShowFinish] = useState(false);
-  const [showCorrection, setShowCorrection] = useState(false);
+  const [correctingRound, setCorrectingRound] = useState<any | null>(null);
   const [isPausing, setIsPausing] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const [isDiscarding, setIsDiscarding] = useState(false);
@@ -305,14 +306,6 @@ function GameRoom() {
                 >
                   {isUndoing ? "Undoing..." : "Undo Last Round"}
                 </Button>
-                <Button
-                  variant="outline"
-                  size="sm"
-                  onClick={() => setShowCorrection(true)}
-                  disabled={room.status !== "active"}
-                >
-                  <Pencil className="h-3.5 w-3.5" /> Correction
-                </Button>
               </div>
               <Button
                 variant="ghost"
@@ -328,17 +321,32 @@ function GameRoom() {
             {lastRound && (
               <Card className="p-4">
                 <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                  Last round
+                  Last round played
                 </p>
+
                 <div className="mt-2 flex items-center justify-between text-sm tabular-nums">
                   <span>
                     Round #{lastRound.number} — led by Team {lastRound.leadingTeam}
                   </span>
                 </div>
+
                 <div className="mt-1 text-xs text-muted-foreground">
-                  +{lastRound.pointsA} / +{lastRound.pointsB} → {lastRound.scoreAfterA} :{" "}
-                  {lastRound.scoreAfterB}
+                  Team A {lastRound.pointsA >= 0 ? "+" : ""}
+                  {lastRound.pointsA} / Team B {lastRound.pointsB >= 0 ? "+" : ""}
+                  {lastRound.pointsB} → {lastRound.scoreAfterA} : {lastRound.scoreAfterB}
                 </div>
+
+                {lastRound.corrections && lastRound.corrections.length > 0 && (
+                  <div className="mt-2 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                    Corrected {lastRound.corrections.length}x
+                  </div>
+                )}
+
+                {lastRound.note && (
+                  <p className="mt-2 rounded-md bg-muted px-2 py-1 text-xs text-muted-foreground">
+                    {lastRound.note}
+                  </p>
+                )}
               </Card>
             )}
           </div>
@@ -372,13 +380,13 @@ function GameRoom() {
                     key={r.id}
                     round={r}
                     onUndo={
-                      room.status === "active"
-                        ? () => toast.success(`Round #${r.number} undone`)
+                      room.status === "active" && r.number === room.rounds.length
+                        ? handleUndoLastRound
                         : undefined
                     }
                     onCorrect={
                       room.status === "active"
-                        ? () => setShowCorrection(true)
+                        ? () => setCorrectingRound(r)
                         : undefined
                     }
                   />
@@ -460,75 +468,153 @@ function GameRoom() {
           </DialogFooter>
         </DialogContent>
       </Dialog>
-
-      {/* Correction */}
-      <CorrectionDialog open={showCorrection} onOpenChange={setShowCorrection} />
+      {correctingRound && (
+        <CorrectionDialog
+          round={correctingRound}
+          open={Boolean(correctingRound)}
+          onOpenChange={(open) => {
+            if (!open) {
+              setCorrectingRound(null);
+            }
+          }}
+          onSave={async ({ roundId, pointsA, pointsB, reason }) => {
+            await correctRound({
+              code: room.code,
+              roundId,
+              pointsA,
+              pointsB,
+              reason,
+              enteredBy: "Adam",
+            });
+          }}
+        />
+      )}
     </AppShell>
   );
 }
 
 function CorrectionDialog({
+  round,
   open,
   onOpenChange,
+  onSave,
 }: {
+  round: {
+    id: any;
+    number: number;
+    pointsA: number;
+    pointsB: number;
+  };
   open: boolean;
-  onOpenChange: (o: boolean) => void;
+  onOpenChange: (open: boolean) => void;
+  onSave: (data: {
+    roundId: any;
+    pointsA: number;
+    pointsB: number;
+    reason?: string;
+  }) => Promise<void>;
 }) {
-  const [team, setTeam] = useState<"A" | "B">("A");
-  const [delta, setDelta] = useState("");
+  const [pointsA, setPointsA] = useState(String(round.pointsA));
+  const [pointsB, setPointsB] = useState(String(round.pointsB));
   const [reason, setReason] = useState("");
+  const [isSaving, setIsSaving] = useState(false);
+
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogContent>
         <DialogHeader>
-          <DialogTitle>Add correction</DialogTitle>
+          <DialogTitle>Correct Round #{round.number}</DialogTitle>
           <DialogDescription>
-            Apply a positive or negative adjustment to a team's score.
+            Update the points for this round. All following rounds will be recalculated.
           </DialogDescription>
         </DialogHeader>
+
         <div className="space-y-4">
-          <div className="grid grid-cols-2 gap-2">
-            {(["A", "B"] as const).map((t) => (
-              <Button
-                key={t}
-                variant={team === t ? "default" : "outline"}
-                onClick={() => setTeam(t)}
-              >
-                Team {t}
-              </Button>
-            ))}
-          </div>
           <div>
-            <label className="text-sm font-medium">Correction</label>
+            <label className="text-sm font-medium">Team A points</label>
             <input
               className="mt-2 h-12 w-full rounded-md border border-input bg-background px-3 text-center text-xl font-bold tabular-nums"
-              inputMode="numeric"
-              placeholder="-50 or +30"
-              value={delta}
-              onChange={(e) => setDelta(e.target.value)}
+              inputMode="text"
+              value={pointsA}
+              onChange={(event) => {
+                if (/^-?\d*$/.test(event.target.value)) {
+                  setPointsA(event.target.value);
+                }
+              }}
             />
           </div>
+
+          <div>
+            <label className="text-sm font-medium">Team B points</label>
+            <input
+              className="mt-2 h-12 w-full rounded-md border border-input bg-background px-3 text-center text-xl font-bold tabular-nums"
+              inputMode="text"
+              value={pointsB}
+              onChange={(event) => {
+                if (/^-?\d*$/.test(event.target.value)) {
+                  setPointsB(event.target.value);
+                }
+              }}
+            />
+          </div>
+
           <div>
             <label className="text-sm font-medium">Reason (optional)</label>
             <input
               className="mt-2 h-10 w-full rounded-md border border-input bg-background px-3 text-sm"
               value={reason}
-              onChange={(e) => setReason(e.target.value)}
-              placeholder="e.g. miscounted bombka"
+              onChange={(event) => setReason(event.target.value)}
+              placeholder="e.g. forgotten meldunek"
             />
           </div>
         </div>
+
         <DialogFooter>
-          <Button variant="outline" onClick={() => onOpenChange(false)}>
+          <Button
+            variant="outline"
+            onClick={() => onOpenChange(false)}
+            disabled={isSaving}
+          >
             Cancel
           </Button>
+
           <Button
-            onClick={() => {
-              onOpenChange(false);
-              toast.success("Correction saved");
+            disabled={isSaving}
+            onClick={async () => {
+              const parsedA = Number(pointsA);
+              const parsedB = Number(pointsB);
+
+              if (!Number.isInteger(parsedA) || !Number.isInteger(parsedB)) {
+                toast.error("Enter valid whole numbers for both teams.");
+                return;
+              }
+
+              try {
+                setIsSaving(true);
+
+                await onSave({
+                  roundId: round.id,
+                  pointsA: parsedA,
+                  pointsB: parsedB,
+                  reason: reason.trim() || undefined,
+                });
+
+                toast.success("Round corrected.");
+                onOpenChange(false);
+              } catch (error) {
+                console.error(error);
+
+                toast.error(
+                  error instanceof Error
+                    ? error.message
+                    : "Could not save correction.",
+                );
+              } finally {
+                setIsSaving(false);
+              }
             }}
           >
-            Save correction
+            {isSaving ? "Saving..." : "Save correction"}
           </Button>
         </DialogFooter>
       </DialogContent>
