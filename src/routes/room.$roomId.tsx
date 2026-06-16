@@ -37,6 +37,7 @@ import {
   History,
 } from "lucide-react";
 import { toast } from "sonner";
+import { RoomCodeCard } from "@/components/room-code-card";
 
 export const Route = createFileRoute("/room/$roomId")({
   head: () => ({ meta: [{ title: "Game Room — Tysiac Score" }] }),
@@ -60,6 +61,9 @@ function GameRoom() {
   const leaveRoom = useMutation(api.rooms.leaveRoom);
   const assignParticipantToTeam = useMutation(api.rooms.assignParticipantToTeam);
   const removeParticipantFromRoom = useMutation(api.rooms.removeParticipantFromRoom);
+  const startRoom = useMutation(api.rooms.startRoom);
+  const randomizeRoomTeams = useMutation(api.rooms.randomizeRoomTeams);
+  const clearRoomTeams = useMutation(api.rooms.clearRoomTeams);
 
   const [showAdd, setShowAdd] = useState(false);
   const [showPause, setShowPause] = useState(false);
@@ -68,6 +72,9 @@ function GameRoom() {
   const [isPausing, setIsPausing] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
   const [isDiscarding, setIsDiscarding] = useState(false);
+  const [isStartingRoom, setIsStartingRoom] = useState(false);
+  const [isRandomizingTeams, setIsRandomizingTeams] = useState(false);
+  const [isClearingTeams, setIsClearingTeams] = useState(false);
 
   if (room === undefined) {
     return (
@@ -180,6 +187,87 @@ function GameRoom() {
     }
   };
 
+  const handleRandomizeOnlineTeams = async () => {
+    try {
+      setIsRandomizingTeams(true);
+
+      await randomizeRoomTeams({
+        code: room.code,
+      });
+
+      toast.success("Teams randomized.");
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not randomize teams.",
+      );
+    } finally {
+      setIsRandomizingTeams(false);
+    }
+  };
+
+  const handleClearOnlineTeams = async () => {
+    try {
+      setIsClearingTeams(true);
+
+      await clearRoomTeams({
+        code: room.code,
+      });
+
+      toast.success("Teams cleared.");
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not clear teams.",
+      );
+    } finally {
+      setIsClearingTeams(false);
+    }
+  };
+
+  const handleStartOnlineMatch = async () => {
+    if (teamAPlayers.length !== 2 || teamBPlayers.length !== 2) {
+      toast.error("Each team must contain exactly two players.");
+      return;
+    }
+
+    const playingParticipants = [...teamAPlayers, ...teamBPlayers];
+
+    try {
+      setIsStartingRoom(true);
+
+      await startRoom({
+        code: room.code,
+        players: playingParticipants.map((participant) => ({
+          nickname: participant.name,
+          participantType: participant.participantType,
+          team: participant.team as "A" | "B",
+          canEnterScores:
+            participant.role === "host" || participant.canEnterScores,
+          isHost: participant.role === "host",
+        })),
+      });
+
+      toast.success("Match started.");
+    } catch (error) {
+      console.error(error);
+
+      toast.error(
+        error instanceof Error
+          ? error.message
+          : "Could not start the match.",
+      );
+    } finally {
+      setIsStartingRoom(false);
+    }
+  };
+
   const teamAPlayers = room.participants.filter(
     (participant) => participant.team === "A",
   );
@@ -217,16 +305,13 @@ function GameRoom() {
                 </div>
 
                 <p className="mt-1 text-sm text-muted-foreground">
-                  Players can join with the room code before the host starts the match.
+                  Share the room code with players before starting the match.
                 </p>
               </div>
+            </div>
 
-              <div className="rounded-lg border border-border bg-secondary px-4 py-2">
-                <p className="text-xs text-muted-foreground">Room code</p>
-                <p className="font-mono text-2xl font-bold tracking-widest">
-                  {room.code}
-                </p>
-              </div>
+            <div className="mt-5">
+              <RoomCodeCard code={room.code} />
             </div>
           </Card>
 
@@ -241,9 +326,29 @@ function GameRoom() {
                 </p>
               </div>
 
-              <Badge variant={canStartMatch ? "default" : "secondary"}>
-                {teamAPlayers.length}/2 Team A · {teamBPlayers.length}/2 Team B
-              </Badge>
+              <div className="flex flex-wrap items-center gap-2">
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleRandomizeOnlineTeams}
+                  disabled={isRandomizingTeams}
+                >
+                  {isRandomizingTeams ? "Randomizing..." : "Randomize"}
+                </Button>
+
+                <Button
+                  size="sm"
+                  variant="outline"
+                  onClick={handleClearOnlineTeams}
+                  disabled={isClearingTeams}
+                >
+                  {isClearingTeams ? "Clearing..." : "Clear"}
+                </Button>
+
+                <Badge variant={canStartMatch ? "default" : "secondary"}>
+                  {teamAPlayers.length}/2 Team A · {teamBPlayers.length}/2 Team B
+                </Badge>
+              </div>
             </div>
 
             <div className="mt-5 grid gap-4 lg:grid-cols-3">
@@ -428,21 +533,33 @@ function GameRoom() {
             )}
           </Card>
 
-          <Card className="mt-4 p-5 text-center">
-            <h2 className="font-display text-lg font-bold">
-              Waiting for the host
-            </h2>
-            <p className="mt-2 text-sm text-muted-foreground">
-              The match will start when the host assigns teams and starts the game.
-            </p>
+          <Card className="mt-4 p-5">
+            <div className="flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
+              <div>
+                <h2 className="font-display text-lg font-bold">
+                  Ready to start?
+                </h2>
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Assign exactly two players to each team before starting the match.
+                </p>
+              </div>
 
-            <Button
-              variant="outline"
-              className="mt-4"
-              onClick={handleLeaveLobby}
-            >
-              Back to home
-            </Button>
+              <div className="flex flex-col gap-2 sm:flex-row">
+                <Button
+                  variant="outline"
+                  onClick={handleLeaveLobby}
+                >
+                  Back to home
+                </Button>
+
+                <Button
+                  onClick={handleStartOnlineMatch}
+                  disabled={!canStartMatch || isStartingRoom}
+                >
+                  {isStartingRoom ? "Starting..." : "Start Match"}
+                </Button>
+              </div>
+            </div>
           </Card>
         </div>
       </AppShell>

@@ -943,3 +943,95 @@ export const removeParticipantFromRoom = mutation({
     };
   },
 });
+
+export const randomizeRoomTeams = mutation({
+  args: {
+    code: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (room.status !== "waiting") {
+      throw new Error("Teams can only be randomized before the match starts.");
+    }
+
+    const participants = await ctx.db
+      .query("roomParticipants")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
+    const players = participants.filter(
+      (participant) => participant.role !== "spectator",
+    );
+
+    if (players.length !== 4) {
+      throw new Error("Exactly four players are required to randomize teams.");
+    }
+
+    const shuffled = [...players].sort(() => Math.random() - 0.5);
+
+    await Promise.all(
+      shuffled.map((participant, index) =>
+        ctx.db.patch(participant._id, {
+          team: index < 2 ? "A" : "B",
+        }),
+      ),
+    );
+
+    return {
+      ok: true,
+    };
+  },
+});
+
+export const clearRoomTeams = mutation({
+  args: {
+    code: v.string(),
+  },
+
+  handler: async (ctx, args) => {
+    const room = await ctx.db
+      .query("rooms")
+      .withIndex("by_code", (q) =>
+        q.eq("code", args.code.trim().toUpperCase()),
+      )
+      .unique();
+
+    if (!room) {
+      throw new Error("Room not found.");
+    }
+
+    if (room.status !== "waiting") {
+      throw new Error("Teams can only be cleared before the match starts.");
+    }
+
+    const participants = await ctx.db
+      .query("roomParticipants")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .collect();
+
+    await Promise.all(
+      participants
+        .filter((participant) => participant.role !== "spectator")
+        .map((participant) =>
+          ctx.db.patch(participant._id, {
+            team: undefined,
+          }),
+        ),
+    );
+
+    return {
+      ok: true,
+    };
+  },
+});
