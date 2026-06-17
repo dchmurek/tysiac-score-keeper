@@ -1,5 +1,5 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
@@ -33,6 +33,24 @@ function Landing() {
   const navigate = useNavigate();
   const joinRoomAsGuest = useMutation(api.rooms.joinRoomAsGuest);
   const [isJoining, setIsJoining] = useState(false);
+
+  useEffect(() => {
+    if (typeof window === "undefined") return;
+
+    const params = new URLSearchParams(window.location.search);
+    const codeFromUrl = params.get("code");
+
+    if (codeFromUrl) {
+      setCode(codeFromUrl.toUpperCase());
+
+      setTimeout(() => {
+        document.getElementById("join")?.scrollIntoView({
+          behavior: "smooth",
+          block: "start",
+        });
+      }, 100);
+    }
+  }, []);
 
   const handleJoinRoom = async () => {
     if (!code.trim()) {
@@ -72,13 +90,20 @@ function Landing() {
         },
       });
     } catch (error) {
-      console.error(error);
+      const message = error instanceof Error ? error.message : "Failed to join room";
 
-      toast.error(
-        error instanceof Error
-          ? error.message
-          : "Could not join the room.",
-      );
+      if (
+        role === "player" &&
+        message.toLowerCase().includes("before the game starts")
+      ) {
+        setRole("spectator");
+        toast.error(
+          "Game already started. You can still join as a spectator. Click Join Room again.",
+        );
+        return;
+      }
+
+      toast.error(message);
     } finally {
       setIsJoining(false);
     }
@@ -163,7 +188,7 @@ function Landing() {
               className="mt-5 space-y-4"
               onSubmit={(e) => {
                 e.preventDefault();
-                toast.success(`Joining room ${code || "—"} as ${nick || "Guest"} (${role})`);
+                handleJoinRoom();
               }}
             >
               <div>
@@ -207,8 +232,8 @@ function Landing() {
                 </RadioGroup>
               </div>
               <Button
+                type="submit"
                 className="h-12 w-full"
-                onClick={handleJoinRoom}
                 disabled={isJoining}
               >
                 {isJoining ? "Joining..." : "Join Room"}

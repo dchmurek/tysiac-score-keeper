@@ -1,7 +1,10 @@
 import { createFileRoute, Link, useParams } from "@tanstack/react-router";
+import { useQuery } from "convex/react";
 import { Button } from "@/components/ui/button";
-import { X, QrCode } from "lucide-react";
-import { activeRoom } from "@/lib/mock-data";
+import { Card } from "@/components/ui/card";
+import { X } from "lucide-react";
+import { QRCodeSVG } from "qrcode.react";
+import { api } from "../../convex/_generated/api";
 
 export const Route = createFileRoute("/room/$roomId/large-screen")({
   head: () => ({ meta: [{ title: "Large Screen — Tysiac Score" }] }),
@@ -10,8 +13,39 @@ export const Route = createFileRoute("/room/$roomId/large-screen")({
 
 function LargeScreen() {
   const { roomId } = useParams({ from: "/room/$roomId/large-screen" });
-  const room = activeRoom;
+
+  const room = useQuery(api.rooms.getGameRoom, {
+    code: roomId,
+  });
+
+  if (room === undefined) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background felt-gradient px-4">
+        <Card className="p-6 text-center">
+          <p className="text-sm text-muted-foreground">Loading room...</p>
+        </Card>
+      </div>
+    );
+  }
+
+  if (room === null) {
+    return (
+      <div className="flex min-h-screen items-center justify-center bg-background felt-gradient px-4">
+        <Card className="max-w-md p-6 text-center">
+          <h1 className="font-display text-xl font-bold">Room not found</h1>
+          <p className="mt-2 text-sm text-muted-foreground">
+            Check the room code and try again.
+          </p>
+          <Link to="/" className="mt-4 inline-flex">
+            <Button>Back home</Button>
+          </Link>
+        </Card>
+      </div>
+    );
+  }
+
   const last = room.rounds[room.rounds.length - 1];
+  const joinUrl = `${window.location.origin}/?code=${room.code}`;
 
   return (
     <div className="flex min-h-screen flex-col bg-background felt-gradient">
@@ -61,13 +95,13 @@ function LargeScreen() {
           </p>
           {last && (
             <p className="text-xs text-muted-foreground">
-              Last: Team {last.leadingTeam} led, +{last.pointsA}/{last.pointsB}
+              Last: Team {last.leadingTeam} declared, +{last.pointsA}/{last.pointsB}
             </p>
           )}
         </div>
         <div className="flex items-center gap-3">
-          <div className="grid h-16 w-16 place-items-center rounded-lg border border-border bg-card">
-            <QrCode className="h-10 w-10 text-muted-foreground" />
+          <div className="rounded-lg border border-border bg-white p-2">
+            <QRCodeSVG value={joinUrl} size={56} />
           </div>
         </div>
       </div>

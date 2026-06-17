@@ -346,12 +346,19 @@ export const addRound = mutation({
       throw new Error("Room not found.");
     }
 
-    if (room.status !== "active") {
-      throw new Error("This match is not active.");
-    }
+    const participant = await ctx.db
+      .query("roomParticipants")
+      .withIndex("by_room", (q) => q.eq("roomId", room._id))
+      .filter((q) => q.eq(q.field("_id"), args.enteredBy as any))
+      .first();
 
-    if (!Number.isInteger(args.pointsA) || !Number.isInteger(args.pointsB)) {
-      throw new Error("Round points must be whole numbers.");
+    if (participant) {
+      if (
+        participant.role === "spectator" ||
+        participant.canEnterScores === false
+      ) {
+        throw new Error("You do not have permission to enter scores.");
+      }
     }
 
     const currentA = room.scoreA ?? 0;
@@ -475,6 +482,7 @@ export const resumeRoom = mutation({
 export const undoLastRound = mutation({
   args: {
     code: v.string(),
+    enteredBy: v.string(),
   },
 
   handler: async (ctx, args) => {
@@ -491,6 +499,23 @@ export const undoLastRound = mutation({
 
     if (room.status !== "active") {
       throw new Error("Only an active match can be modified.");
+    }
+
+    if (args.enteredBy.trim()) {
+      const participant = await ctx.db
+        .query("roomParticipants")
+        .withIndex("by_room", (q) => q.eq("roomId", room._id))
+        .filter((q) => q.eq(q.field("_id"), args.enteredBy as any))
+        .first();
+
+      if (participant) {
+        if (
+          participant.role === "spectator" ||
+          participant.canEnterScores === false
+        ) {
+          throw new Error("You do not have permission to enter scores.");
+        }
+      }
     }
 
     const lastRound = await ctx.db

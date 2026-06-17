@@ -1,8 +1,10 @@
 import {
   createFileRoute,
   Link,
+  Outlet,
   useNavigate,
   useParams,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useState } from "react";
 import { AppShell } from "@/components/app-shell";
@@ -24,6 +26,7 @@ import { RoundHistoryItem } from "@/components/round-history-item";
 import { AddRoundModal } from "@/components/add-round-modal";
 import { useMutation, useQuery } from "convex/react";
 import { api } from "../../convex/_generated/api";
+import { QRCodeSVG } from "qrcode.react";
 import {
   Plus,
   Undo2,
@@ -47,6 +50,14 @@ export const Route = createFileRoute("/room/$roomId")({
 function GameRoom() {
   const { roomId } = useParams({ from: "/room/$roomId" });
   const navigate = useNavigate();
+
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+
+  if (pathname.endsWith("/large-screen")) {
+    return <Outlet />;
+  }
 
   const room = useQuery(api.rooms.getGameRoom, {
     code: roomId,
@@ -107,9 +118,69 @@ function GameRoom() {
     );
   }
 
+  const storedParticipantId =
+    typeof window !== "undefined"
+      ? sessionStorage.getItem(`tysiac-participant-${room.code}`)
+      : null;
+
+  const currentParticipant = storedParticipantId
+    ? room.participants.find(
+      (participant) => participant.id === storedParticipantId,
+    )
+    : null;
+
+  const canManageRoom =
+    !storedParticipantId ||
+    currentParticipant?.role === "host" ||
+    currentParticipant?.role === "player";
+
+  const isHost =
+    !storedParticipantId || currentParticipant?.role === "host";
+
   const leading =
     room.teamA.score > room.teamB.score ? "A" : room.teamB.score > room.teamA.score ? "B" : null;
   const lastRound = room.rounds[room.rounds.length - 1];
+
+  const joinUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/?code=${room.code}`
+      : "";
+
+  const roundsPlayed = room.rounds.length;
+
+  const totalPointsA = room.rounds.reduce(
+    (sum, round) => sum + round.pointsA,
+    0,
+  );
+
+  const totalPointsB = room.rounds.reduce(
+    (sum, round) => sum + round.pointsB,
+    0,
+  );
+
+  const highestRoundA =
+    room.rounds.length > 0
+      ? Math.max(...room.rounds.map((round) => round.pointsA))
+      : 0;
+
+  const highestRoundB =
+    room.rounds.length > 0
+      ? Math.max(...room.rounds.map((round) => round.pointsB))
+      : 0;
+
+  const averageRoundA =
+    roundsPlayed > 0 ? Math.round(totalPointsA / roundsPlayed) : 0;
+
+  const averageRoundB =
+    roundsPlayed > 0 ? Math.round(totalPointsB / roundsPlayed) : 0;
+
+  const winner =
+    room.winner ??
+    (room.teamA.score > room.teamB.score
+      ? "A"
+      : room.teamB.score > room.teamA.score
+        ? "B"
+        : null);
 
   const handleLeaveLobby = async () => {
     const storedParticipantId = sessionStorage.getItem(
@@ -310,8 +381,24 @@ function GameRoom() {
               </div>
             </div>
 
-            <div className="mt-5">
+            <div className="mt-5 grid gap-4 md:grid-cols-[minmax(0,1fr)_220px] md:items-stretch">
               <RoomCodeCard code={room.code} />
+
+              <Card className="grid place-items-center p-4">
+                <div className="text-center">
+                  <div className="inline-block rounded-xl border border-border bg-white p-3">
+                    <QRCodeSVG value={joinUrl} size={128} />
+                  </div>
+
+                  <p className="mt-3 text-sm font-medium">
+                    Scan to join
+                  </p>
+
+                  <p className="mt-1 font-mono text-sm font-bold tracking-widest text-primary">
+                    {room.code}
+                  </p>
+                </div>
+              </Card>
             </div>
           </Card>
 
@@ -327,23 +414,27 @@ function GameRoom() {
               </div>
 
               <div className="flex flex-wrap items-center gap-2">
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleRandomizeOnlineTeams}
-                  disabled={isRandomizingTeams}
-                >
-                  {isRandomizingTeams ? "Randomizing..." : "Randomize"}
-                </Button>
+                {isHost && (
+                  <>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleRandomizeOnlineTeams}
+                      disabled={isRandomizingTeams}
+                    >
+                      {isRandomizingTeams ? "Randomizing..." : "Randomize"}
+                    </Button>
 
-                <Button
-                  size="sm"
-                  variant="outline"
-                  onClick={handleClearOnlineTeams}
-                  disabled={isClearingTeams}
-                >
-                  {isClearingTeams ? "Clearing..." : "Clear"}
-                </Button>
+                    <Button
+                      size="sm"
+                      variant="outline"
+                      onClick={handleClearOnlineTeams}
+                      disabled={isClearingTeams}
+                    >
+                      {isClearingTeams ? "Clearing..." : "Clear"}
+                    </Button>
+                  </>
+                )}
 
                 <Badge variant={canStartMatch ? "default" : "secondary"}>
                   {teamAPlayers.length}/2 Team A · {teamBPlayers.length}/2 Team B
@@ -377,7 +468,7 @@ function GameRoom() {
                             </p>
                           </div>
 
-                          {participant.role !== "host" && (
+                          {isHost && participant.role !== "host" && (
                             <Button
                               size="sm"
                               variant="ghost"
@@ -390,29 +481,31 @@ function GameRoom() {
                           )}
                         </div>
 
-                        <div className="mt-3 grid grid-cols-2 gap-2">
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={teamAPlayers.length >= 2}
-                            onClick={() =>
-                              handleAssignParticipant(participant.id, "A")
-                            }
-                          >
-                            Team A
-                          </Button>
+                        {isHost && (
+                          <div className="mt-3 grid grid-cols-2 gap-2">
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={teamAPlayers.length >= 2}
+                              onClick={() =>
+                                handleAssignParticipant(participant.id, "A")
+                              }
+                            >
+                              Team A
+                            </Button>
 
-                          <Button
-                            size="sm"
-                            variant="outline"
-                            disabled={teamBPlayers.length >= 2}
-                            onClick={() =>
-                              handleAssignParticipant(participant.id, "B")
-                            }
-                          >
-                            Team B
-                          </Button>
-                        </div>
+                            <Button
+                              size="sm"
+                              variant="outline"
+                              disabled={teamBPlayers.length >= 2}
+                              onClick={() =>
+                                handleAssignParticipant(participant.id, "B")
+                              }
+                            >
+                              Team B
+                            </Button>
+                          </div>
+                        )}
                       </div>
                     ))
                   )}
@@ -444,15 +537,17 @@ function GameRoom() {
                             </p>
                           </div>
 
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              handleAssignParticipant(participant.id, undefined)
-                            }
-                          >
-                            Unassign
-                          </Button>
+                          {isHost && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                handleAssignParticipant(participant.id, undefined)
+                              }
+                            >
+                              Unassign
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))
@@ -485,15 +580,17 @@ function GameRoom() {
                             </p>
                           </div>
 
-                          <Button
-                            size="sm"
-                            variant="ghost"
-                            onClick={() =>
-                              handleAssignParticipant(participant.id, undefined)
-                            }
-                          >
-                            Unassign
-                          </Button>
+                          {isHost && (
+                            <Button
+                              size="sm"
+                              variant="ghost"
+                              onClick={() =>
+                                handleAssignParticipant(participant.id, undefined)
+                              }
+                            >
+                              Unassign
+                            </Button>
+                          )}
                         </div>
                       </div>
                     ))
@@ -519,13 +616,15 @@ function GameRoom() {
                         </p>
                       </div>
 
-                      <Button
-                        size="sm"
-                        variant="ghost"
-                        onClick={() => handleRemoveParticipant(participant.id)}
-                      >
-                        Remove
-                      </Button>
+                      {isHost && (
+                        <Button
+                          size="sm"
+                          variant="ghost"
+                          onClick={() => handleRemoveParticipant(participant.id)}
+                        >
+                          Remove
+                        </Button>
+                      )}
                     </div>
                   ))}
                 </div>
@@ -552,12 +651,14 @@ function GameRoom() {
                   Back to home
                 </Button>
 
-                <Button
-                  onClick={handleStartOnlineMatch}
-                  disabled={!canStartMatch || isStartingRoom}
-                >
-                  {isStartingRoom ? "Starting..." : "Start Match"}
-                </Button>
+                {isHost && (
+                  <Button
+                    onClick={handleStartOnlineMatch}
+                    disabled={!canStartMatch || isStartingRoom}
+                  >
+                    {isStartingRoom ? "Starting..." : "Start Match"}
+                  </Button>
+                )}
               </div>
             </div>
           </Card>
@@ -578,6 +679,7 @@ function GameRoom() {
 
       await undoLastRound({
         code: room.code,
+        enteredBy: storedParticipantId ?? "",
       });
 
       toast.success("Last round undone.");
@@ -706,11 +808,17 @@ function GameRoom() {
                   <SheetTitle>Room {room.code}</SheetTitle>
                 </SheetHeader>
                 <div className="mt-6 grid place-items-center">
-                  <div className="grid h-56 w-56 place-items-center rounded-xl border-2 border-dashed border-border bg-muted/40">
-                    <QrCode className="h-24 w-24 text-muted-foreground" />
+                  <div className="rounded-xl border border-border bg-white p-4">
+                    <QRCodeSVG value={joinUrl} size={192} />
                   </div>
-                  <p className="mt-4 font-mono text-3xl font-bold tracking-widest">{room.code}</p>
-                  <p className="mt-1 text-sm text-muted-foreground">Scan to join</p>
+
+                  <p className="mt-4 font-mono text-3xl font-bold tracking-widest">
+                    {room.code}
+                  </p>
+
+                  <p className="mt-1 text-sm text-muted-foreground">
+                    Scan to join
+                  </p>
                 </div>
               </SheetContent>
             </Sheet>
@@ -719,14 +827,16 @@ function GameRoom() {
                 <Maximize2 className="h-4 w-4" />
               </Button>
             </Link>
-            <Button
-              size="icon"
-              variant="outline"
-              aria-label="Pause"
-              onClick={() => setShowPause(true)}
-            >
-              <Pause className="h-4 w-4" />
-            </Button>
+            {canManageRoom && (
+              <Button
+                size="icon"
+                variant="outline"
+                aria-label="Pause"
+                onClick={() => setShowPause(true)}
+              >
+                <Pause className="h-4 w-4" />
+              </Button>
+            )}
           </div>
         </Card>
 
@@ -747,41 +857,47 @@ function GameRoom() {
 
           {/* Center actions (lives between cards on desktop, below on mobile) */}
           <div className="order-3 flex flex-col gap-3 lg:order-none">
-            <Card className="p-5 text-center">
-              <p className="text-xs font-semibold uppercase tracking-wide text-muted-foreground">
-                Next action
-              </p>
-              <Button
-                size="lg"
-                className="mt-3 h-16 w-full text-lg"
-                onClick={() => setShowAdd(true)}
-                disabled={room.status !== "active"}
-              >
-                <Plus className="h-6 w-6" /> Add Round
-              </Button>
-              <div className="mt-3 grid grid-cols-2 gap-2">
+            {canManageRoom ? (
+              <Card className="p-5 text-center">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  NEXT ACTION
+                </p>
+
+                <Button
+                  className="mt-4 h-12 w-full"
+                  disabled={room.status !== "active"}
+                  onClick={() => setShowAdd(true)}
+                >
+                  + Add Round
+                </Button>
+
                 <Button
                   variant="outline"
+                  className="mt-3 w-full"
+                  disabled={room.rounds.length === 0}
                   onClick={handleUndoLastRound}
-                  disabled={
-                    isUndoing ||
-                    room.rounds.length === 0 ||
-                    room.status !== "active"
-                  }
                 >
-                  {isUndoing ? "Undoing..." : "Undo Last Round"}
+                  Undo Last Round
                 </Button>
-              </div>
-              <Button
-                variant="ghost"
-                size="sm"
-                className="mt-2 w-full text-muted-foreground"
-                onClick={() => setShowFinish(true)}
-                disabled={room.status === "finished"}
-              >
-                Finish Without Saving
-              </Button>
-            </Card>
+
+                <Button
+                  variant="ghost"
+                  className="mt-3 w-full"
+                  onClick={handleDiscardRoom}
+                >
+                  Finish Without Saving
+                </Button>
+              </Card>
+            ) : (
+              <Card className="p-5 text-center">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  SPECTATOR MODE
+                </p>
+                <p className="mt-3 text-sm text-muted-foreground">
+                  You are watching this game. Score controls are hidden.
+                </p>
+              </Card>
+            )}
 
             {lastRound && (
               <Card className="p-4">
@@ -845,12 +961,14 @@ function GameRoom() {
                     key={r.id}
                     round={r}
                     onUndo={
-                      room.status === "active" && r.number === room.rounds.length
+                      canManageRoom &&
+                        room.status === "active" &&
+                        r.number === room.rounds.length
                         ? handleUndoLastRound
                         : undefined
                     }
                     onCorrect={
-                      room.status === "active"
+                      canManageRoom && room.status === "active"
                         ? () => setCorrectingRound(r)
                         : undefined
                     }
@@ -875,7 +993,7 @@ function GameRoom() {
             pointsA: data.pointsA,
             pointsB: data.pointsB,
             note: data.note,
-            enteredBy: "Adam",
+            enteredBy: storedParticipantId ?? "",
           });
         }}
       />
@@ -949,7 +1067,7 @@ function GameRoom() {
               pointsA,
               pointsB,
               reason,
-              enteredBy: "Adam",
+              enteredBy: storedParticipantId ?? "",
             });
           }}
         />

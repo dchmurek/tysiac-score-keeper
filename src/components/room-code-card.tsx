@@ -1,6 +1,6 @@
 import { cn } from "@/lib/utils";
 import { Card } from "@/components/ui/card";
-import { Copy, Share2, QrCode } from "lucide-react";
+import { Copy, Share2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 
@@ -10,20 +10,25 @@ interface RoomCodeCardProps {
 }
 
 export function RoomCodeCard({ code, className }: RoomCodeCardProps) {
+  const joinUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/?code=${code}`
+      : "";
+
   return (
-    <Card className={cn("p-5", className)}>
-      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">Room Code</p>
-      <div className="mt-2 flex items-center justify-between gap-4">
-        <span className="score-display text-5xl text-primary sm:text-6xl">{code}</span>
-        <div className="grid h-20 w-20 place-items-center rounded-lg border-2 border-dashed border-border bg-muted/40">
-          <QrCode className="h-10 w-10 text-muted-foreground" />
-        </div>
-      </div>
-      <div className="mt-4 flex gap-2">
+    <Card className={cn("flex min-h-[220px] flex-col p-5", className)}>
+      <p className="text-xs font-medium uppercase tracking-wide text-muted-foreground">
+        Room Code
+      </p>
+
+      <p className="mt-6 font-mono text-6xl font-bold tracking-widest text-primary sm:text-7xl">
+        {code}
+      </p>
+
+      <div className="mt-auto grid grid-cols-2 gap-3 pt-8">
         <Button
           variant="outline"
           size="sm"
-          className="flex-1"
           onClick={() => {
             navigator.clipboard?.writeText(code);
             toast.success("Room code copied");
@@ -31,11 +36,28 @@ export function RoomCodeCard({ code, className }: RoomCodeCardProps) {
         >
           <Copy className="h-4 w-4" /> Copy
         </Button>
+
         <Button
           variant="outline"
           size="sm"
-          className="flex-1"
-          onClick={() => toast.success("Share link ready")}
+          onClick={async () => {
+            if (navigator.share && joinUrl) {
+              await navigator.share({
+                title: "Join my Tysiac room",
+                text: `Join room ${code}`,
+                url: joinUrl,
+              });
+              return;
+            }
+
+            if (joinUrl) {
+              await navigator.clipboard?.writeText(joinUrl);
+              toast.success("Join link copied");
+              return;
+            }
+
+            toast.success("Share link ready");
+          }}
         >
           <Share2 className="h-4 w-4" /> Share
         </Button>
