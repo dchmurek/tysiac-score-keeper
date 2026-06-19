@@ -1,12 +1,13 @@
 import { createFileRoute, Link } from "@tanstack/react-router";
 import { useEffect, useState } from "react";
+import { motion, useReducedMotion } from "framer-motion";
 import { AppHeader } from "@/components/app-header";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
-import { Plus, LogIn, QrCode, Smartphone, BarChart3, Users } from "lucide-react";
+import { Plus, QrCode, Smartphone } from "lucide-react";
 import { toast } from "sonner";
 import { useMutation } from "convex/react";
 import { api } from "../../convex/_generated/api";
@@ -15,11 +16,11 @@ import { useNavigate } from "@tanstack/react-router";
 export const Route = createFileRoute("/")({
   head: () => ({
     meta: [
-      { title: "Tysiac Score — Track your Tysiąc games with ease" },
+      { title: "Tysiac Score — score keeper for Tysiąc" },
       {
         name: "description",
         content:
-          "Create a room, invite friends, track every round, and compare statistics for your Tysiąc card games.",
+          "Create a local Tysiąc game or join an online room with a code.",
       },
     ],
   }),
@@ -33,6 +34,21 @@ function Landing() {
   const navigate = useNavigate();
   const joinRoomAsGuest = useMutation(api.rooms.joinRoomAsGuest);
   const [isJoining, setIsJoining] = useState(false);
+  const shouldReduceMotion = useReducedMotion();
+
+  const enterFromBottom = shouldReduceMotion
+    ? {}
+    : {
+      initial: { opacity: 0, y: 18 },
+      animate: { opacity: 1, y: 0 },
+    };
+
+  const softScale = shouldReduceMotion
+    ? {}
+    : {
+      initial: { opacity: 0, scale: 0.96 },
+      animate: { opacity: 1, scale: 1 },
+    };
 
   useEffect(() => {
     if (typeof window === "undefined") return;
@@ -90,7 +106,8 @@ function Landing() {
         },
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message : "Failed to join room";
+      const message =
+        error instanceof Error ? error.message : "Failed to join room";
 
       if (
         role === "player" &&
@@ -114,33 +131,72 @@ function Landing() {
       <AppHeader variant="marketing" />
 
       <section className="mx-auto max-w-7xl px-4 pb-12 pt-10 sm:px-6 sm:pt-16">
-        <div className="grid items-start gap-10 lg:grid-cols-2">
-          <div>
-            <span className="inline-flex items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground">
-              <span className="h-1.5 w-1.5 rounded-full bg-primary" /> Built for real card-table
-              play
-            </span>
-            <h1 className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl">
-              Track your Tysiąc games <span className="text-primary">with ease</span>.
-            </h1>
-            <p className="mt-5 max-w-xl text-lg text-muted-foreground">
-              Create a room, invite your friends, track every round and compare statistics — built
-              for use while you play with physical cards.
-            </p>
-            <div className="mt-7 flex flex-wrap gap-3">
-              <Link to="/create-room">
-                <Button size="lg" className="h-12 px-6 text-base">
-                  <Plus className="h-5 w-5" /> Create Room
-                </Button>
-              </Link>
-              <a href="#join">
-                <Button size="lg" variant="outline" className="h-12 px-6 text-base">
-                  Join Room
-                </Button>
-              </a>
-            </div>
+        <div className="grid items-stretch gap-10 lg:grid-cols-2">
+          <motion.div
+            className="flex flex-col"
+            {...enterFromBottom}
+            transition={{ duration: 0.35, ease: "easeOut" }}
+          >
+            <motion.span
+              className="inline-flex w-fit items-center gap-2 rounded-full border border-border bg-card px-3 py-1 text-xs font-medium text-muted-foreground"
+              {...enterFromBottom}
+              transition={{ duration: 0.35, ease: "easeOut", delay: 0.05 }}
+            >
+              <motion.span
+                className="h-1.5 w-1.5 rounded-full bg-primary"
+                animate={
+                  shouldReduceMotion
+                    ? {}
+                    : {
+                      scale: [1, 1.35, 1],
+                      opacity: [1, 0.65, 1],
+                    }
+                }
+                transition={{
+                  duration: 1.6,
+                  repeat: Infinity,
+                  ease: "easeInOut",
+                }}
+              />
+              Built for real card-table play
+            </motion.span>
 
-            <div className="mt-10 grid gap-3 sm:grid-cols-2">
+            <motion.h1
+              className="mt-5 font-display text-4xl font-bold leading-[1.05] tracking-tight sm:text-5xl lg:text-6xl"
+              {...enterFromBottom}
+              transition={{ duration: 0.4, ease: "easeOut", delay: 0.12 }}
+            >
+              Track your Tysiąc games{" "}
+              <span className="text-primary">with ease</span>.
+            </motion.h1>
+
+            <motion.p
+              className="mt-5 max-w-xl text-lg text-muted-foreground"
+              {...enterFromBottom}
+              transition={{ duration: 0.4, ease: "easeOut", delay: 0.2 }}
+            >
+              Create a local game or join an online room with a code. Track
+              every round while you play with physical cards.
+            </motion.p>
+
+            <motion.div
+              className="mt-7 flex flex-wrap gap-3"
+              {...enterFromBottom}
+              transition={{ duration: 0.4, ease: "easeOut", delay: 0.28 }}
+            >
+              <Link to="/create-room">
+                <motion.div
+                  whileHover={shouldReduceMotion ? {} : { y: -3 }}
+                  whileTap={shouldReduceMotion ? {} : { scale: 0.97 }}
+                >
+                  <Button size="lg" className="h-12 px-6 text-base">
+                    <Plus className="h-5 w-5" /> Create Game
+                  </Button>
+                </motion.div>
+              </Link>
+            </motion.div>
+
+            <div className="mt-10 grid gap-3 sm:grid-cols-2 lg:mt-auto">
               {[
                 {
                   icon: Smartphone,
@@ -148,108 +204,143 @@ function Landing() {
                   desc: "The app only tracks scores — the game stays at the table.",
                 },
                 {
-                  icon: BarChart3,
-                  title: "Track scores live",
-                  desc: "Every round, leader and correction is saved.",
-                },
-                {
                   icon: QrCode,
                   title: "Join with a code or QR",
-                  desc: "Spectators and players hop in instantly.",
+                  desc: "Online players can join by room code or QR.",
                 },
-                {
-                  icon: Users,
-                  title: "Personal & pair stats",
-                  desc: "See your best partners and win streaks.",
-                },
-              ].map(({ icon: Icon, title, desc }) => (
-                <div
+              ].map(({ icon: Icon, title, desc }, index) => (
+                <motion.div
                   key={title}
                   className="flex items-start gap-3 rounded-xl border border-border bg-card/60 p-3"
+                  {...softScale}
+                  transition={{
+                    duration: 0.25,
+                    ease: "easeOut",
+                    delay: 0.35 + index * 0.08,
+                  }}
+                  whileHover={
+                    shouldReduceMotion
+                      ? {}
+                      : {
+                        y: -4,
+                        boxShadow: "0 14px 35px rgba(0, 0, 0, 0.08)",
+                      }
+                  }
                 >
-                  <div className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary">
+                  <motion.div
+                    className="grid h-9 w-9 shrink-0 place-items-center rounded-lg bg-primary/10 text-primary"
+                    animate={shouldReduceMotion ? {} : { y: [0, -4, 0] }}
+                    transition={{
+                      duration: 2.8,
+                      repeat: Infinity,
+                      ease: "easeInOut",
+                      delay: index * 0.25,
+                    }}
+                  >
                     <Icon className="h-4.5 w-4.5" />
-                  </div>
+                  </motion.div>
+
                   <div>
                     <p className="text-sm font-semibold">{title}</p>
                     <p className="text-xs text-muted-foreground">{desc}</p>
                   </div>
-                </div>
+                </motion.div>
               ))}
             </div>
-          </div>
+          </motion.div>
 
-          <Card id="join" className="p-6 lg:sticky lg:top-24">
-            <h2 className="font-display text-xl font-bold">Join a room</h2>
-            <p className="mt-1 text-sm text-muted-foreground">
-              Enter the room code your host shared with you.
-            </p>
-            <form
-              className="mt-5 space-y-4"
-              onSubmit={(e) => {
-                e.preventDefault();
-                handleJoinRoom();
-              }}
-            >
-              <div>
-                <Label htmlFor="code">Room Code</Label>
-                <Input
-                  id="code"
-                  placeholder="K8P2"
-                  className="mt-2 h-12 text-center font-mono text-2xl uppercase tracking-[0.4em]"
-                  maxLength={6}
-                  value={code}
-                  onChange={(e) => setCode(e.target.value.toUpperCase())}
-                />
-              </div>
-              <div>
-                <Label htmlFor="nick">Nickname</Label>
-                <Input
-                  id="nick"
-                  placeholder="Your name at the table"
-                  className="mt-2 h-11"
-                  value={nick}
-                  onChange={(e) => setNick(e.target.value)}
-                />
-              </div>
-              <div>
-                <Label>Join as</Label>
-                <RadioGroup
-                  value={role}
-                  onValueChange={(v) => setRole(v as "player" | "spectator")}
-                  className="mt-2 grid grid-cols-2 gap-2"
-                >
-                  {(["player", "spectator"] as const).map((r) => (
-                    <Label
-                      key={r}
-                      htmlFor={`role-${r}`}
-                      className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background p-3 text-sm capitalize has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
-                    >
-                      <RadioGroupItem value={r} id={`role-${r}`} />
-                      {r}
-                    </Label>
-                  ))}
-                </RadioGroup>
-              </div>
-              <Button
-                type="submit"
-                className="h-12 w-full"
-                disabled={isJoining}
-              >
-                {isJoining ? "Joining..." : "Join Room"}
-              </Button>
-              <p className="text-center text-xs text-muted-foreground">
-                Need an account?{" "}
-                <Link to="/sign-up" className="font-medium text-primary hover:underline">
-                  Create one
-                </Link>{" "}
-                ·{" "}
-                <Link to="/sign-in" className="font-medium text-primary hover:underline">
-                  Sign in
-                </Link>
+          <motion.div
+            id="join"
+            className="lg:sticky lg:top-24"
+            {...softScale}
+            transition={{ duration: 0.35, ease: "easeOut", delay: 0.18 }}
+            whileHover={
+              shouldReduceMotion
+                ? {}
+                : {
+                  y: -4,
+                  boxShadow: "0 18px 45px rgba(0, 0, 0, 0.1)",
+                }
+            }
+          >
+            <Card className="p-6 shadow-xl">
+              <h2 className="font-display text-xl font-bold">Join a room</h2>
+
+              <p className="mt-1 text-sm text-muted-foreground">
+                Enter the room code your host shared with you.
               </p>
-            </form>
-          </Card>
+
+              <form
+                className="mt-5 space-y-4"
+                onSubmit={(e) => {
+                  e.preventDefault();
+                  handleJoinRoom();
+                }}
+              >
+                <div>
+                  <Label htmlFor="code">Room Code</Label>
+                  <Input
+                    id="code"
+                    placeholder="K8P2"
+                    className="mt-2 h-12 text-center font-mono text-2xl uppercase tracking-[0.4em]"
+                    maxLength={6}
+                    value={code}
+                    onChange={(e) => setCode(e.target.value.toUpperCase())}
+                  />
+                </div>
+
+                <div>
+                  <Label htmlFor="nick">Nickname</Label>
+                  <Input
+                    id="nick"
+                    placeholder="Your name at the table"
+                    className="mt-2 h-11"
+                    value={nick}
+                    onChange={(e) => setNick(e.target.value)}
+                  />
+                </div>
+
+                <div>
+                  <Label>Join as</Label>
+
+                  <RadioGroup
+                    value={role}
+                    onValueChange={(value) =>
+                      setRole(value as "player" | "spectator")
+                    }
+                    className="mt-2 grid grid-cols-2 gap-2"
+                  >
+                    {(["player", "spectator"] as const).map((joinRole) => (
+                      <Label
+                        key={joinRole}
+                        htmlFor={`role-${joinRole}`}
+                        className="flex cursor-pointer items-center gap-2 rounded-lg border border-border bg-background p-3 text-sm capitalize transition-colors has-[[data-state=checked]]:border-primary has-[[data-state=checked]]:bg-primary/5"
+                      >
+                        <RadioGroupItem
+                          value={joinRole}
+                          id={`role-${joinRole}`}
+                        />
+                        {joinRole}
+                      </Label>
+                    ))}
+                  </RadioGroup>
+                </div>
+
+                <motion.div
+                  whileHover={shouldReduceMotion ? {} : { y: -2 }}
+                  whileTap={shouldReduceMotion ? {} : { scale: 0.98 }}
+                >
+                  <Button
+                    type="submit"
+                    className="h-12 w-full"
+                    disabled={isJoining}
+                  >
+                    {isJoining ? "Joining..." : "Join Room"}
+                  </Button>
+                </motion.div>
+              </form>
+            </Card>
+          </motion.div>
         </div>
       </section>
     </div>

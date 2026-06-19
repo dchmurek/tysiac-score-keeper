@@ -79,6 +79,7 @@ function GameRoom() {
   const [showAdd, setShowAdd] = useState(false);
   const [showPause, setShowPause] = useState(false);
   const [showFinish, setShowFinish] = useState(false);
+  const [showUndoConfirm, setShowUndoConfirm] = useState(false);
   const [correctingRound, setCorrectingRound] = useState<any | null>(null);
   const [isPausing, setIsPausing] = useState(false);
   const [isUndoing, setIsUndoing] = useState(false);
@@ -129,13 +130,20 @@ function GameRoom() {
     )
     : null;
 
+  const isLocalRoom = room.mode === "local";
+
   const canManageRoom =
+    isLocalRoom ||
     !storedParticipantId ||
-    currentParticipant?.role === "host" ||
-    currentParticipant?.role === "player";
+    !currentParticipant ||
+    currentParticipant.role === "host" ||
+    currentParticipant.role === "player";
 
   const isHost =
-    !storedParticipantId || currentParticipant?.role === "host";
+    isLocalRoom ||
+    !storedParticipantId ||
+    !currentParticipant ||
+    currentParticipant.role === "host";
 
   const leading =
     room.teamA.score > room.teamB.score ? "A" : room.teamB.score > room.teamA.score ? "B" : null;
@@ -668,12 +676,6 @@ function GameRoom() {
   }
 
   const handleUndoLastRound = async () => {
-    const confirmed = window.confirm(
-      "Undo the last round? This action will restore the previous score.",
-    );
-
-    if (!confirmed) return;
-
     try {
       setIsUndoing(true);
 
@@ -709,12 +711,6 @@ function GameRoom() {
         return;
       }
 
-      const confirmed = window.confirm(
-        "Pause this game? It can be resumed later.",
-      );
-
-      if (!confirmed) return;
-
       await pauseRoom({
         code: room.code,
       });
@@ -741,10 +737,10 @@ function GameRoom() {
         code: room.code,
       });
 
-      toast.success("Match discarded.");
+      toast.success("Game ended.");
 
       navigate({
-        to: "/dashboard",
+        to: "/",
       });
     } catch (error) {
       console.error(error);
@@ -782,51 +778,63 @@ function GameRoom() {
             </div>
           </div>
           <div className="flex items-center gap-1.5">
-            <div className="hidden items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 sm:flex">
-              <span className="text-xs text-muted-foreground">Code</span>
-              <span className="font-mono text-sm font-bold tracking-wider">{room.code}</span>
-              <Button
-                size="icon"
-                variant="ghost"
-                className="h-7 w-7"
-                onClick={() => {
-                  navigator.clipboard?.writeText(room.code);
-                  toast.success("Copied");
-                }}
-              >
-                <Copy className="h-3.5 w-3.5" />
-              </Button>
-            </div>
-            <Sheet>
-              <SheetTrigger asChild>
-                <Button size="icon" variant="outline" aria-label="QR code">
-                  <QrCode className="h-4 w-4" />
-                </Button>
-              </SheetTrigger>
-              <SheetContent>
-                <SheetHeader>
-                  <SheetTitle>Room {room.code}</SheetTitle>
-                </SheetHeader>
-                <div className="mt-6 grid place-items-center">
-                  <div className="rounded-xl border border-border bg-white p-4">
-                    <QRCodeSVG value={joinUrl} size={192} />
-                  </div>
-
-                  <p className="mt-4 font-mono text-3xl font-bold tracking-widest">
+            {!isLocalRoom && (
+              <>
+                <div className="hidden items-center gap-2 rounded-lg border border-border bg-secondary px-3 py-1.5 sm:flex">
+                  <span className="text-xs text-muted-foreground">Code</span>
+                  <span className="font-mono text-sm font-bold tracking-wider">
                     {room.code}
-                  </p>
+                  </span>
 
-                  <p className="mt-1 text-sm text-muted-foreground">
-                    Scan to join
-                  </p>
+                  <Button
+                    size="icon"
+                    variant="ghost"
+                    className="h-7 w-7"
+                    onClick={() => {
+                      navigator.clipboard?.writeText(room.code);
+                      toast.success("Copied");
+                    }}
+                  >
+                    <Copy className="h-3.5 w-3.5" />
+                  </Button>
                 </div>
-              </SheetContent>
-            </Sheet>
+
+                <Sheet>
+                  <SheetTrigger asChild>
+                    <Button size="icon" variant="outline" aria-label="QR code">
+                      <QrCode className="h-4 w-4" />
+                    </Button>
+                  </SheetTrigger>
+
+                  <SheetContent>
+                    <SheetHeader>
+                      <SheetTitle>Room {room.code}</SheetTitle>
+                    </SheetHeader>
+
+                    <div className="mt-6 grid place-items-center">
+                      <div className="rounded-xl border border-border bg-white p-4">
+                        <QRCodeSVG value={joinUrl} size={192} />
+                      </div>
+
+                      <p className="mt-4 font-mono text-3xl font-bold tracking-widest">
+                        {room.code}
+                      </p>
+
+                      <p className="mt-1 text-sm text-muted-foreground">
+                        Scan to join
+                      </p>
+                    </div>
+                  </SheetContent>
+                </Sheet>
+              </>
+            )}
+
             <Link to="/room/$roomId/large-screen" params={{ roomId }}>
               <Button size="icon" variant="outline" aria-label="Large screen mode">
                 <Maximize2 className="h-4 w-4" />
               </Button>
             </Link>
+
             {canManageRoom && (
               <Button
                 size="icon"
@@ -857,7 +865,30 @@ function GameRoom() {
 
           {/* Center actions (lives between cards on desktop, below on mobile) */}
           <div className="order-3 flex flex-col gap-3 lg:order-none">
-            {canManageRoom ? (
+            {room.status === "finished" ? (
+              <Card className="p-5 text-center">
+                <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
+                  GAME FINISHED
+                </p>
+
+                <p className="mt-3 text-lg font-bold">
+                  {room.winner ? `Team ${room.winner} won` : "Game ended"}
+                </p>
+
+                <p className="mt-1 text-sm text-muted-foreground">
+                  Final score: {room.teamA.score} : {room.teamB.score}
+                </p>
+
+                <Button
+                  variant="ghost"
+                  className="mt-4 w-full"
+                  onClick={handleDiscardRoom}
+                  disabled={isDiscarding}
+                >
+                  {isDiscarding ? "Leaving..." : "Back to Home"}
+                </Button>
+              </Card>
+            ) : canManageRoom ? (
               <Card className="p-5 text-center">
                 <p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">
                   NEXT ACTION
@@ -874,18 +905,18 @@ function GameRoom() {
                 <Button
                   variant="outline"
                   className="mt-3 w-full"
-                  disabled={room.rounds.length === 0}
-                  onClick={handleUndoLastRound}
+                  disabled={room.rounds.length === 0 || isUndoing}
+                  onClick={() => setShowUndoConfirm(true)}
                 >
-                  Undo Last Round
+                  {isUndoing ? "Undoing..." : "Undo Last Round"}
                 </Button>
 
                 <Button
                   variant="ghost"
                   className="mt-3 w-full"
-                  onClick={handleDiscardRoom}
+                  onClick={() => setShowFinish(true)}
                 >
-                  Finish Without Saving
+                  End Game
                 </Button>
               </Card>
             ) : (
@@ -914,7 +945,8 @@ function GameRoom() {
                 <div className="mt-1 text-xs text-muted-foreground">
                   Team A {lastRound.pointsA >= 0 ? "+" : ""}
                   {lastRound.pointsA} / Team B {lastRound.pointsB >= 0 ? "+" : ""}
-                  {lastRound.pointsB} → {lastRound.scoreAfterA} : {lastRound.scoreAfterB}
+                  {lastRound.pointsB} → {lastRound.scoreAfterA} :{" "}
+                  {lastRound.scoreAfterB}
                 </div>
 
                 {lastRound.corrections && lastRound.corrections.length > 0 && (
@@ -964,7 +996,7 @@ function GameRoom() {
                       canManageRoom &&
                         room.status === "active" &&
                         r.number === room.rounds.length
-                        ? handleUndoLastRound
+                        ? () => setShowUndoConfirm(true)
                         : undefined
                     }
                     onCorrect={
@@ -999,22 +1031,36 @@ function GameRoom() {
       />
 
       {/* Pause modal */}
+      {/* Pause modal */}
       <Dialog open={showPause} onOpenChange={setShowPause}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Pause this game?</DialogTitle>
+            <DialogTitle>
+              {room.status === "paused" ? "Resume this game?" : "Pause this game?"}
+            </DialogTitle>
+
             <DialogDescription>
-              The game will be saved and can be resumed later. It will not count toward statistics
-              until it is finished.
+              {room.status === "paused"
+                ? "The game will continue and players will be able to enter rounds again."
+                : "The game will be paused. You can resume it later from this room."}
             </DialogDescription>
           </DialogHeader>
+
           <DialogFooter>
-            <Button variant="outline" onClick={() => setShowPause(false)}>
-              Cancel
-            </Button>
             <Button
               variant="outline"
-              onClick={handlePauseToggle}
+              onClick={() => setShowPause(false)}
+              disabled={isPausing}
+            >
+              Cancel
+            </Button>
+
+            <Button
+              variant="outline"
+              onClick={async () => {
+                await handlePauseToggle();
+                setShowPause(false);
+              }}
               disabled={isPausing || room.status === "finished"}
             >
               {isPausing
@@ -1027,26 +1073,59 @@ function GameRoom() {
         </DialogContent>
       </Dialog>
 
-      {/* Finish without saving */}
+      <Dialog open={showUndoConfirm} onOpenChange={setShowUndoConfirm}>
+        <DialogContent>
+          <DialogHeader>
+            <DialogTitle>Undo last round?</DialogTitle>
+            <DialogDescription>
+              This will remove the last round and restore the previous score.
+            </DialogDescription>
+          </DialogHeader>
+
+          <DialogFooter>
+            <Button
+              variant="outline"
+              onClick={() => setShowUndoConfirm(false)}
+              disabled={isUndoing}
+            >
+              Keep Round
+            </Button>
+
+            <Button
+              variant="destructive"
+              onClick={async () => {
+                setShowUndoConfirm(false);
+                await handleUndoLastRound();
+              }}
+              disabled={isUndoing}
+            >
+              <Undo2 className="h-4 w-4" />
+              {isUndoing ? "Undoing..." : "Undo Round"}
+            </Button>
+          </DialogFooter>
+        </DialogContent>
+      </Dialog>
+
       <Dialog open={showFinish} onOpenChange={setShowFinish}>
         <DialogContent>
           <DialogHeader>
-            <DialogTitle>Finish without saving?</DialogTitle>
+            <DialogTitle>End this game?</DialogTitle>
             <DialogDescription>
-              This match will be discarded and won't appear in stats.
+              This will end the current game and return you to the main screen.
             </DialogDescription>
           </DialogHeader>
           <DialogFooter>
             <Button variant="outline" onClick={() => setShowFinish(false)}>
-              Keep playing
+              Keep Playing
             </Button>
+
             <Button
               variant="destructive"
               onClick={handleDiscardRoom}
               disabled={isDiscarding}
             >
               <X className="h-4 w-4" />
-              {isDiscarding ? "Discarding..." : "Discard"}
+              {isDiscarding ? "Ending..." : "End Game"}
             </Button>
           </DialogFooter>
         </DialogContent>

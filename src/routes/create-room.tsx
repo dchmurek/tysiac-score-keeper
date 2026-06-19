@@ -28,6 +28,16 @@ interface DraftPlayer {
   team?: "A" | "B";
 }
 
+function getDefaultRoomName() {
+  return new Intl.DateTimeFormat("pl-PL", {
+    day: "2-digit",
+    month: "2-digit",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  }).format(new Date());
+}
+
 function CreateRoom() {
   const navigate = useNavigate();
 
@@ -40,19 +50,21 @@ function CreateRoom() {
   const [createdRoom, setCreatedRoom] = useState<{
     roomId: string;
     code: string;
+    hostParticipantId?: string;
   } | null>(null);
 
   const [allowSpectators, setAllowSpectators] = useState(true);
   const [mode, setMode] = useState<"local" | "online">("local");
 
   const [step, setStep] = useState<1 | 2 | 3 | 4>(1);
-  const [name, setName] = useState("Saturday Match");
+  const [name] = useState(getDefaultRoomName);
+  const [hostName, setHostName] = useState("");
   const [target] = useState(1000);
 
   const [players, setPlayers] = useState<DraftPlayer[]>([
     {
-      id: "u-adam",
-      name: "Adam",
+      id: "local-host",
+      name: hostName,
       isGuest: false,
       isHost: true,
       canScore: true,
@@ -168,8 +180,8 @@ function CreateRoom() {
       return;
     }
 
-    if (!name.trim()) {
-      toast.error("Enter a room name.");
+    if (!hostName.trim()) {
+      toast.error("Enter your nickname.");
       return;
     }
 
@@ -178,9 +190,17 @@ function CreateRoom() {
 
       const room = await createRoom({
         name: name.trim(),
-        hostName: "Daniel",
-        allowSpectators,
+        hostName: hostName.trim(),
+        allowSpectators: mode === "online" ? allowSpectators : false,
+        mode,
       });
+
+      if (room.hostParticipantId) {
+        sessionStorage.setItem(
+          `tysiac-participant-${room.code}`,
+          room.hostParticipantId,
+        );
+      }
 
       toast.success(
         mode === "online"
@@ -244,6 +264,13 @@ function CreateRoom() {
           isHost: Boolean(player.isHost),
         })),
       });
+
+      if (createdRoom.hostParticipantId) {
+        sessionStorage.setItem(
+          `tysiac-participant-${createdRoom.code}`,
+          createdRoom.hostParticipantId,
+        );
+      }
 
       toast.success("Room ready — let's play!");
 
@@ -315,15 +342,25 @@ function CreateRoom() {
         <Card className="mt-6 p-6">
           {step === 1 && (
             <div className="space-y-5">
-              <h2 className="font-display text-lg font-bold">Room details</h2>
+              <h2 className="font-display text-lg font-bold">Game setup</h2>
 
               <div>
-                <Label htmlFor="rname">Room Name</Label>
+                <Label htmlFor="hostName">Your nickname</Label>
                 <Input
-                  id="rname"
+                  id="hostName"
                   className="mt-2 h-11"
-                  value={name}
-                  onChange={(e) => setName(e.target.value)}
+                  value={hostName}
+                  onChange={(e) => {
+                    const value = e.target.value;
+                    setHostName(value);
+
+                    setPlayers((currentPlayers) =>
+                      currentPlayers.map((player) =>
+                        player.isHost ? { ...player, name: value } : player,
+                      ),
+                    );
+                  }}
+                  placeholder="e.g. Adam"
                 />
               </div>
 
@@ -367,19 +404,21 @@ function CreateRoom() {
                 </div>
               </div>
 
-              <div className="flex items-center justify-between rounded-lg border border-border p-3">
-                <div>
-                  <p className="text-sm font-semibold">Allow spectators</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
-                    Spectators can join the room and watch the score.
-                  </p>
-                </div>
+              {mode === "online" && (
+                <div className="flex items-center justify-between rounded-lg border border-border p-3">
+                  <div>
+                    <p className="text-sm font-semibold">Allow spectators</p>
+                    <p className="mt-1 text-xs text-muted-foreground">
+                      Spectators can join the room and watch the score.
+                    </p>
+                  </div>
 
-                <Switch
-                  checked={allowSpectators}
-                  onCheckedChange={setAllowSpectators}
-                />
-              </div>
+                  <Switch
+                    checked={allowSpectators}
+                    onCheckedChange={setAllowSpectators}
+                  />
+                </div>
+              )}
 
               <div>
                 <Label htmlFor="target">Target Score</Label>
@@ -639,7 +678,7 @@ function CreateRoom() {
                 Back
               </Button>
             ) : (
-              <Link to="/dashboard">
+              <Link to="/">
                 <Button variant="ghost">Cancel</Button>
               </Link>
             )}

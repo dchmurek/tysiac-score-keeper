@@ -12,6 +12,7 @@ export default defineSchema({
       v.literal("paused"),
       v.literal("finished"),
     ),
+    mode: v.optional(v.union(v.literal("local"), v.literal("online"))),
     targetScore: v.number(),
     allowSpectators: v.boolean(),
     createdAt: v.number(),

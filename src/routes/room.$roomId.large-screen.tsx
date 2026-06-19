@@ -45,7 +45,13 @@ function LargeScreen() {
   }
 
   const last = room.rounds[room.rounds.length - 1];
-  const joinUrl = `${window.location.origin}/?code=${room.code}`;
+
+  const isLocalRoom = room.mode === "local";
+
+  const joinUrl =
+    typeof window !== "undefined"
+      ? `${window.location.origin}/?code=${room.code}`
+      : "";
 
   return (
     <div className="flex min-h-screen flex-col bg-background felt-gradient">
@@ -54,7 +60,11 @@ function LargeScreen() {
           <p className="text-xs font-medium uppercase tracking-widest text-muted-foreground">
             {room.name}
           </p>
-          <p className="font-mono text-lg font-bold tracking-widest text-primary">{room.code}</p>
+          {!isLocalRoom && (
+            <p className="font-mono text-lg font-bold tracking-widest text-primary">
+              {room.code}
+            </p>
+          )}
         </div>
         <Link to="/room/$roomId" params={{ roomId }}>
           <Button variant="ghost">
@@ -99,11 +109,13 @@ function LargeScreen() {
             </p>
           )}
         </div>
-        <div className="flex items-center gap-3">
-          <div className="rounded-lg border border-border bg-white p-2">
-            <QRCodeSVG value={joinUrl} size={56} />
+        {!isLocalRoom && (
+          <div className="flex items-center gap-3">
+            <div className="rounded-lg border border-border bg-white p-2">
+              <QRCodeSVG value={joinUrl} size={56} />
+            </div>
           </div>
-        </div>
+        )}
       </div>
     </div>
   );

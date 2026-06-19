@@ -37,7 +37,7 @@ function applyScoreRule(
   }
 
   return {
-    finalScore: Math.max(0, rawScore),
+    finalScore: rawScore,
     won: false,
   };
 }
@@ -47,6 +47,7 @@ export const createRoom = mutation({
     name: v.string(),
     hostName: v.string(),
     allowSpectators: v.boolean(),
+    mode: v.union(v.literal("local"), v.literal("online")),
   },
 
   handler: async (ctx, args) => {
@@ -66,6 +67,7 @@ export const createRoom = mutation({
       code,
       hostName: args.hostName.trim(),
       status: "waiting",
+      mode: args.mode,
       targetScore: 1000,
       allowSpectators: args.allowSpectators,
       scoreA: 0,
@@ -74,7 +76,7 @@ export const createRoom = mutation({
       createdAt: Date.now(),
     });
 
-    await ctx.db.insert("roomParticipants", {
+    const participantId = await ctx.db.insert("roomParticipants", {
       roomId,
       nickname: args.hostName.trim(),
       participantType: "account",
@@ -86,6 +88,7 @@ export const createRoom = mutation({
     return {
       roomId,
       code,
+      hostParticipantId: participantId,
     };
   },
 });
@@ -160,17 +163,44 @@ export const startRoom = mutation({
       .collect();
 
     for (const participant of existingParticipants) {
-      await ctx.db.delete(participant._id);
+      const selectedPlayer = normalizedPlayers.find(
+        (player) =>
+          player.nickname.toLowerCase() === participant.nickname.toLowerCase(),
+      );
+
+      if (selectedPlayer) {
+        await ctx.db.patch(participant._id, {
+          role: selectedPlayer.isHost ? "host" : "player",
+          team: selectedPlayer.team,
+          canEnterScores: true,
+        });
+      } else {
+        await ctx.db.patch(participant._id, {
+          role: "spectator",
+          team: undefined,
+          canEnterScores: false,
+        });
+      }
     }
 
-    for (const player of normalizedPlayers) {
+    const existingNicknames = new Set(
+      existingParticipants.map((participant) =>
+        participant.nickname.toLowerCase(),
+      ),
+    );
+
+    const missingPlayers = normalizedPlayers.filter(
+      (player) => !existingNicknames.has(player.nickname.toLowerCase()),
+    );
+
+    for (const player of missingPlayers) {
       await ctx.db.insert("roomParticipants", {
         roomId: room._id,
         nickname: player.nickname,
         participantType: player.participantType,
         role: player.isHost ? "host" : "player",
         team: player.team,
-        canEnterScores: player.isHost ? true : player.canEnterScores,
+        canEnterScores: true,
         joinedAt: Date.now(),
       });
     }
@@ -237,6 +267,20 @@ export const getGameRoom = query({
       .withIndex("by_room", (q) => q.eq("roomId", room._id))
       .collect();
 
+    const getParticipantDisplayName = (enteredBy: string) => {
+      const value = enteredBy.trim();
+
+      if (!value) {
+        return "";
+      }
+
+      const participant = participants.find(
+        (participant) => String(participant._id) === value,
+      );
+
+      return participant?.nickname ?? value;
+    };
+
     const rounds = await ctx.db
       .query("rounds")
       .withIndex("by_room", (q) => q.eq("roomId", room._id))
@@ -268,10 +312,12 @@ export const getGameRoom = query({
       id: room._id,
       code: room.code,
       name: room.name,
+      mode: room.mode ?? "online",
       targetScore: room.targetScore,
       status: room.status,
       currentDealer: room.currentDealer ?? room.hostName,
       winner: room.winner,
+
       participants: participants.map((participant) => ({
         id: participant._id,
         name: participant.nickname,
@@ -303,9 +349,10 @@ export const getGameRoom = query({
         pointsB: round.pointsB,
         scoreAfterA: round.scoreAfterA,
         scoreAfterB: round.scoreAfterB,
-        enteredBy: round.enteredBy,
+        enteredBy: getParticipantDisplayName(round.enteredBy),
         timestamp: new Date(round.createdAt).toISOString(),
         note: round.note,
+
         corrections: corrections
           .filter((correction) => correction.roundId === round._id)
           .sort((a, b) => a.createdAt - b.createdAt)
@@ -316,7 +363,7 @@ export const getGameRoom = query({
             newPointsA: correction.newPointsA,
             newPointsB: correction.newPointsB,
             reason: correction.reason,
-            enteredBy: correction.enteredBy,
+            enteredBy: getParticipantDisplayName(correction.enteredBy),
             timestamp: new Date(correction.createdAt).toISOString(),
           })),
       })),
@@ -346,13 +393,17 @@ export const addRound = mutation({
       throw new Error("Room not found.");
     }
 
-    const participant = await ctx.db
-      .query("roomParticipants")
-      .withIndex("by_room", (q) => q.eq("roomId", room._id))
-      .filter((q) => q.eq(q.field("_id"), args.enteredBy as any))
-      .first();
+    if (args.enteredBy.trim()) {
+      const participant = await ctx.db
+        .query("roomParticipants")
+        .withIndex("by_room", (q) => q.eq("roomId", room._id))
+        .filter((q) => q.eq(q.field("_id"), args.enteredBy as any))
+        .first();
 
-    if (participant) {
+      if (!participant) {
+        throw new Error("Participant not found.");
+      }
+
       if (
         participant.role === "spectator" ||
         participant.canEnterScores === false
@@ -508,13 +559,15 @@ export const undoLastRound = mutation({
         .filter((q) => q.eq(q.field("_id"), args.enteredBy as any))
         .first();
 
-      if (participant) {
-        if (
-          participant.role === "spectator" ||
-          participant.canEnterScores === false
-        ) {
-          throw new Error("You do not have permission to enter scores.");
-        }
+      if (!participant) {
+        throw new Error("Participant not found.");
+      }
+
+      if (
+        participant.role === "spectator" ||
+        participant.canEnterScores === false
+      ) {
+        throw new Error("You do not have permission to undo rounds.");
       }
     }
 
@@ -580,10 +633,6 @@ export const discardRoom = mutation({
       throw new Error("Room not found.");
     }
 
-    if (room.status === "finished") {
-      throw new Error("A finished match cannot be discarded.");
-    }
-
     const corrections = await ctx.db
       .query("roundCorrections")
       .withIndex("by_room", (q) => q.eq("roomId", room._id))
@@ -643,6 +692,25 @@ export const correctRound = mutation({
 
     if (room.status !== "active") {
       throw new Error("Only an active match can be modified.");
+    }
+
+    if (args.enteredBy.trim()) {
+      const participant = await ctx.db
+        .query("roomParticipants")
+        .withIndex("by_room", (q) => q.eq("roomId", room._id))
+        .filter((q) => q.eq(q.field("_id"), args.enteredBy as any))
+        .first();
+
+      if (!participant) {
+        throw new Error("Participant not found.");
+      }
+
+      if (
+        participant.role === "spectator" ||
+        participant.canEnterScores === false
+      ) {
+        throw new Error("You do not have permission to correct rounds.");
+      }
     }
 
     if (!Number.isInteger(args.pointsA) || !Number.isInteger(args.pointsB)) {
@@ -797,6 +865,10 @@ export const joinRoomAsGuest = mutation({
 
     if (!room) {
       throw new Error("Room not found.");
+    }
+
+    if (room.mode === "local") {
+      throw new Error("This is a local game and cannot be joined by code.");
     }
 
     if (args.role === "player" && room.status !== "waiting") {

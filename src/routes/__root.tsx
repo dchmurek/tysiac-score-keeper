@@ -6,8 +6,10 @@ import {
   useRouter,
   HeadContent,
   Scripts,
+  useRouterState,
 } from "@tanstack/react-router";
 import { useEffect, type ReactNode } from "react";
+import { AnimatePresence, motion, useReducedMotion } from "framer-motion";
 
 import appCss from "../styles.css?url";
 import { reportLovableError } from "../lib/lovable-error-reporting";
@@ -18,7 +20,9 @@ function NotFoundComponent() {
     <div className="flex min-h-screen items-center justify-center bg-background px-4">
       <div className="max-w-md text-center">
         <h1 className="text-7xl font-bold text-foreground">404</h1>
-        <h2 className="mt-4 text-xl font-semibold text-foreground">Page not found</h2>
+        <h2 className="mt-4 text-xl font-semibold text-foreground">
+          Page not found
+        </h2>
         <p className="mt-2 text-sm text-muted-foreground">
           The page you're looking for doesn't exist or has been moved.
         </p>
@@ -38,6 +42,7 @@ function NotFoundComponent() {
 function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
   console.error(error);
   const router = useRouter();
+
   useEffect(() => {
     reportLovableError(error, { boundary: "tanstack_root_error_component" });
   }, [error]);
@@ -49,7 +54,8 @@ function ErrorComponent({ error, reset }: { error: Error; reset: () => void }) {
           This page didn't load
         </h1>
         <p className="mt-2 text-sm text-muted-foreground">
-          Something went wrong on our end. You can try refreshing or head back home.
+          Something went wrong on our end. You can try refreshing or head back
+          home.
         </p>
         <div className="mt-6 flex flex-wrap justify-center gap-2">
           <button
@@ -81,7 +87,8 @@ export const Route = createRootRouteWithContext<{ queryClient: QueryClient }>()(
       { title: "Tysiac Score — Track your card games" },
       {
         name: "description",
-        content: "Live score tracking, rooms, statistics and rankings for Tysiąc card games.",
+        content:
+          "Live score tracking, rooms, statistics and rankings for Tysiąc card games.",
       },
       { property: "og:title", content: "Tysiac Score" },
       {
@@ -124,10 +131,25 @@ function RootShell({ children }: { children: ReactNode }) {
 
 function RootComponent() {
   const { queryClient } = Route.useRouteContext();
+  const pathname = useRouterState({
+    select: (state) => state.location.pathname,
+  });
+  const shouldReduceMotion = useReducedMotion();
 
   return (
     <QueryClientProvider client={queryClient}>
-      <Outlet />
+      <AnimatePresence mode="wait">
+        <motion.main
+          key={pathname}
+          initial={shouldReduceMotion ? false : { opacity: 0, y: 16, scale: 0.99 }}
+          animate={shouldReduceMotion ? {} : { opacity: 1, y: 0, scale: 1 }}
+          exit={shouldReduceMotion ? {} : { opacity: 0, y: -10, scale: 0.99 }}
+          transition={{ duration: 0.22, ease: "easeOut" }}
+        >
+          <Outlet />
+        </motion.main>
+      </AnimatePresence>
+
       <Toaster position="top-center" />
     </QueryClientProvider>
   );

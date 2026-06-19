@@ -44,7 +44,6 @@ export function RoomCodeCard({ code, className }: RoomCodeCardProps) {
             if (navigator.share && joinUrl) {
               await navigator.share({
                 title: "Join my Tysiac room",
-                text: `Join room ${code}`,
                 url: joinUrl,
               });
               return;
