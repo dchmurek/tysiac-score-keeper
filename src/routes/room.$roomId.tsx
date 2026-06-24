@@ -195,6 +195,34 @@ function GameRoom() {
       `tysiac-participant-${room.code}`,
     );
 
+    if (isHost) {
+      try {
+        setIsDiscarding(true);
+
+        await discardRoom({
+          code: room.code,
+        });
+
+        sessionStorage.removeItem(`tysiac-participant-${room.code}`);
+
+        toast.success("Room closed.");
+
+        navigate({ to: "/" });
+      } catch (error) {
+        console.error(error);
+
+        toast.error(
+          error instanceof Error
+            ? error.message
+            : "Could not close the room.",
+        );
+      } finally {
+        setIsDiscarding(false);
+      }
+
+      return;
+    }
+
     if (!storedParticipantId) {
       navigate({ to: "/" });
       return;
@@ -655,8 +683,13 @@ function GameRoom() {
                 <Button
                   variant="outline"
                   onClick={handleLeaveLobby}
+                  disabled={isDiscarding}
                 >
-                  Back to home
+                  {isHost
+                    ? isDiscarding
+                      ? "Closing..."
+                      : "Close room"
+                    : "Back to home"}
                 </Button>
 
                 {isHost && (
