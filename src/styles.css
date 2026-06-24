@@ -5,11 +5,8 @@
 @custom-variant dark (&:is(.dark *));
 
 @theme inline {
-  --radius-sm: calc(var(--radius) - 4px);
-  --radius-md: calc(var(--radius) - 2px);
-  --radius-lg: var(--radius);
-  --radius-xl: calc(var(--radius) + 4px);
-  --radius-2xl: calc(var(--radius) + 8px);
+  --radius: 0.875rem;
+
   --color-background: var(--background);
   --color-foreground: var(--foreground);
   --color-card: var(--card);
@@ -33,22 +30,19 @@
   --color-border: var(--border);
   --color-input: var(--input);
   --color-ring: var(--ring);
-  --color-ring-offset-background: var(--background);
-  --color-team-a: var(--team-a);
-  --color-team-b: var(--team-b);
-  --font-display: "Manrope", ui-sans-serif, system-ui, sans-serif;
-  --font-sans: "Inter", ui-sans-serif, system-ui, sans-serif;
-  --font-mono: "JetBrains Mono", ui-monospace, monospace;
+
+  --font-display: "Manrope", ui-sans-serif, system-ui;
+  --font-sans: "Inter", ui-sans-serif, system-ui;
+  --font-mono: "JetBrains Mono", ui-monospace;
 }
 
 :root {
-  --radius: 0.875rem;
-
   --background: oklch(0.985 0.005 130);
   --foreground: oklch(0.18 0.02 160);
 
   --card: oklch(1 0 0);
   --card-foreground: oklch(0.18 0.02 160);
+
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.18 0.02 160);
 
@@ -76,37 +70,30 @@
   --border: oklch(0.9 0.012 150);
   --input: oklch(0.92 0.012 150);
   --ring: oklch(0.42 0.11 160);
-
-  --team-a: oklch(0.5 0.12 160);
-  --team-b: oklch(0.55 0.13 250);
 }
 
 .dark {
   --background: oklch(0.16 0.02 160);
   --foreground: oklch(0.97 0.01 150);
+
   --card: oklch(0.22 0.02 160);
   --card-foreground: oklch(0.97 0.01 150);
-  --popover: oklch(0.22 0.02 160);
-  --popover-foreground: oklch(0.97 0.01 150);
+
   --primary: oklch(0.7 0.14 160);
   --primary-foreground: oklch(0.15 0.03 160);
+
   --secondary: oklch(0.27 0.02 160);
   --secondary-foreground: oklch(0.97 0.01 150);
+
   --muted: oklch(0.27 0.02 160);
   --muted-foreground: oklch(0.7 0.02 150);
+
   --accent: oklch(0.3 0.05 160);
   --accent-foreground: oklch(0.97 0.01 150);
-  --destructive: oklch(0.65 0.2 27);
-  --destructive-foreground: oklch(0.99 0.01 27);
-  --success: oklch(0.7 0.16 155);
-  --success-foreground: oklch(0.15 0.03 160);
-  --warning: oklch(0.82 0.15 75);
-  --warning-foreground: oklch(0.2 0.05 70);
+
   --border: oklch(1 0 0 / 12%);
   --input: oklch(1 0 0 / 15%);
   --ring: oklch(0.7 0.14 160);
-  --team-a: oklch(0.72 0.14 160);
-  --team-b: oklch(0.72 0.14 250);
 }
 
 @layer base {
@@ -116,44 +103,14 @@
 
   html,
   body {
-    background-color: var(--color-background);
+    background: var(--color-background);
     color: var(--color-foreground);
     font-family: var(--font-sans);
-    -webkit-font-smoothing: antialiased;
-  }
-
-  h1,
-  h2,
-  h3,
-  h4 {
-    font-family: var(--font-display);
-    letter-spacing: -0.01em;
-  }
-
-  .tabular-nums {
-    font-variant-numeric: tabular-nums;
-  }
-
-  :focus {
-    outline: none;
-  }
-
-  :focus-visible {
-    outline: 3px solid var(--color-ring);
-    outline-offset: 3px;
-    border-radius: 0.75rem;
-  }
-
-  button:focus-visible,
-  a:focus-visible,
-  input:focus-visible,
-  select:focus-visible,
-  textarea:focus-visible,
-  [role="button"]:focus-visible {
-    box-shadow: 0 0 0 4px color-mix(in srgb, var(--color-ring) 25%, transparent);
+    transition: background-color 300ms ease, color 300ms ease;
   }
 }
 
+/* animations */
 @keyframes soft-enter {
   from {
     opacity: 0;
@@ -178,75 +135,19 @@
   }
 }
 
-@keyframes score-pulse {
-  0% {
-    transform: scale(1);
-  }
-
-  45% {
-    transform: scale(1.04);
-  }
-
-  100% {
-    transform: scale(1);
-  }
-}
-
 @keyframes float-soft {
-  0% {
+
+  0%,
+  100% {
     transform: translateY(0);
   }
 
   50% {
     transform: translateY(-4px);
   }
-
-  100% {
-    transform: translateY(0);
-  }
-}
-
-@keyframes slide-up-fade {
-  from {
-    opacity: 0;
-    transform: translateY(14px);
-  }
-
-  to {
-    opacity: 1;
-    transform: translateY(0);
-  }
-}
-
-@keyframes glow-soft {
-  0% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 20%, transparent);
-  }
-
-  70% {
-    box-shadow: 0 0 0 8px color-mix(in srgb, var(--color-primary) 0%, transparent);
-  }
-
-  100% {
-    box-shadow: 0 0 0 0 color-mix(in srgb, var(--color-primary) 0%, transparent);
-  }
 }
 
 @layer utilities {
-  .score-display {
-    font-family: var(--font-display);
-    font-variant-numeric: tabular-nums;
-    font-weight: 800;
-    letter-spacing: -0.04em;
-    line-height: 1;
-  }
-
-  .felt-gradient {
-    background:
-      radial-gradient(ellipse at top, oklch(0.45 0.11 160 / 0.08), transparent 60%),
-      linear-gradient(180deg, var(--color-background) 0%, oklch(0.97 0.012 150) 100%);
-  }
-
   .animate-soft-enter {
     animation: soft-enter 220ms ease-out both;
   }
@@ -255,65 +156,22 @@
     animation: soft-pop 180ms ease-out both;
   }
 
-  .animate-score-pulse {
-    animation: score-pulse 260ms ease-out both;
-  }
-
   .animate-float-soft {
     animation: float-soft 2.8s ease-in-out infinite;
   }
 
-  .animate-slide-up-fade {
-    animation: slide-up-fade 260ms ease-out both;
-  }
-
-  .animate-glow-soft {
-    animation: glow-soft 1.6s ease-out infinite;
-  }
-
-  .delay-75 {
-    animation-delay: 75ms;
-  }
-
-  .delay-150 {
-    animation-delay: 150ms;
-  }
-
-  .delay-300 {
-    animation-delay: 300ms;
-  }
-
   .card-hover {
-    transition:
-      transform 180ms ease,
-      box-shadow 180ms ease,
-      border-color 180ms ease;
+    transition: all 180ms ease;
   }
 
   .card-hover:hover {
     transform: translateY(-2px);
-    box-shadow: 0 14px 35px color-mix(in srgb, var(--color-primary) 10%, transparent);
-    border-color: color-mix(in srgb, var(--color-primary) 35%, var(--color-border));
   }
 }
 
 @media (prefers-reduced-motion: reduce) {
-
-  .animate-soft-enter,
-  .animate-soft-pop,
-  .animate-score-pulse,
-  .animate-float-soft,
-  .animate-slide-up-fade,
-  .animate-glow-soft {
-    animation: none;
-  }
-
-  .card-hover {
-    transition: none;
-  }
-
-  .card-hover:hover {
-    transform: none;
-    box-shadow: none;
+  * {
+    animation: none !important;
+    transition: none !important;
   }
 }

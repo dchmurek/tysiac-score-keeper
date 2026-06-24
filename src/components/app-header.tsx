@@ -3,72 +3,63 @@ import { Moon, Spade, Sun } from "lucide-react";
 import { useEffect, useState } from "react";
 import { Button } from "@/components/ui/button";
 
-interface AppHeaderProps {
-  variant?: "marketing" | "app";
-}
-
-export function AppHeader({ variant: _variant = "marketing" }: AppHeaderProps) {
+export function AppHeader() {
   const [isDark, setIsDark] = useState(false);
 
   useEffect(() => {
     if (typeof window === "undefined") return;
 
-    const savedTheme = localStorage.getItem("tysiac-theme");
+    const saved = localStorage.getItem("tysiac-theme");
 
-    if (savedTheme === "dark") {
+    const dark =
+      saved === "dark" ||
+      (!saved && window.matchMedia("(prefers-color-scheme: dark)").matches);
+
+    setIsDark(dark);
+
+    if (dark) {
       document.documentElement.classList.add("dark");
-      setIsDark(true);
-      return;
-    }
-
-    if (savedTheme === "light") {
+    } else {
       document.documentElement.classList.remove("dark");
-      setIsDark(false);
-      return;
-    }
-
-    const prefersDark = window.matchMedia("(prefers-color-scheme: dark)").matches;
-
-    if (prefersDark) {
-      document.documentElement.classList.add("dark");
-      setIsDark(true);
     }
   }, []);
 
-  const handleToggleTheme = () => {
-    const nextIsDark = !isDark;
+  const applyTheme = (dark: boolean) => {
+    setIsDark(dark);
 
-    setIsDark(nextIsDark);
-
-    if (nextIsDark) {
+    if (dark) {
       document.documentElement.classList.add("dark");
       localStorage.setItem("tysiac-theme", "dark");
-      return;
+    } else {
+      document.documentElement.classList.remove("dark");
+      localStorage.setItem("tysiac-theme", "light");
     }
+  };
 
-    document.documentElement.classList.remove("dark");
-    localStorage.setItem("tysiac-theme", "light");
+  const handleToggleTheme = () => {
+    const next = !isDark;
+
+    if (document.startViewTransition) {
+      document.startViewTransition(() => applyTheme(next));
+    } else {
+      applyTheme(next);
+    }
   };
 
   return (
-    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur supports-[backdrop-filter]:bg-background/60">
+    <header className="sticky top-0 z-40 w-full border-b border-border bg-background/85 backdrop-blur">
       <div className="mx-auto flex h-16 max-w-7xl items-center justify-between px-4 sm:px-6">
-        <Link
-          to="/"
-          className="flex items-center gap-2 font-display text-lg font-bold tracking-tight"
-        >
-          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground shadow-sm">
+        <Link to="/" className="flex items-center gap-2 font-display text-lg font-bold">
+          <span className="grid h-9 w-9 place-items-center rounded-xl bg-primary text-primary-foreground">
             <Spade className="h-5 w-5" />
           </span>
-
-          <span>Tysiac Score</span>
+          Tysiac Score
         </Link>
 
         <Button
           type="button"
           variant="outline"
           size="icon"
-          aria-label={isDark ? "Switch to light theme" : "Switch to dark theme"}
           onClick={handleToggleTheme}
           className="transition-transform hover:-translate-y-0.5 active:scale-95"
         >
